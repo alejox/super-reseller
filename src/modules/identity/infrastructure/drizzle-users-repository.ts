@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { ModuleDb } from "@/shared/db/module-db";
 
 import { tenantWhere } from "@/shared/db/tenant";
 import type { AccessScope } from "../domain/access-scope";
@@ -8,12 +7,6 @@ import type { UserId } from "../domain/ids";
 import type { ScopedUserRow, ScopedUsersRepository } from "../domain/scoped-users-repository";
 import { users } from "./identity.schema";
 
-/**
- * Runs unmodified against both `NeonHttpDatabase` (production) and
- * `PgliteDatabase` (tests) — same pattern as the catalog adapter's
- * `CatalogDb` union.
- */
-type IdentityDb = NeonHttpDatabase | PgliteDatabase;
 
 function toScopedUserRow(row: typeof users.$inferSelect): ScopedUserRow {
   return Object.freeze({
@@ -35,7 +28,7 @@ function toScopedUserRow(row: typeof users.$inferSelect): ScopedUserRow {
  */
 export class DrizzleScopedUsersRepository implements ScopedUsersRepository {
   constructor(
-    private readonly db: IdentityDb,
+    private readonly db: ModuleDb,
     private readonly scope: AccessScope,
   ) {}
 

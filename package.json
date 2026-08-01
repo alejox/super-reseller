@@ -8,16 +8,20 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "db:migrate": "tsx scripts/db/migrate.ts",
-    "db:rollback": "tsx scripts/db/rollback.ts"
+    "db:migrate": "tsx --env-file-if-exists=.env.local scripts/db/migrate.ts",
+    "db:rollback": "tsx --env-file-if-exists=.env.local scripts/db/rollback.ts",
+    "db:seed-admin": "tsx --env-file-if-exists=.env.local scripts/db/seed-admin.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",
     "@neondatabase/serverless": "^1.1.0",
+    "@node-rs/argon2": "^2.0.2",
     "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.6",
     "next": "16.2.12",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

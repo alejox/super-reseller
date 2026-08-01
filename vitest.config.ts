@@ -14,5 +14,12 @@ export default defineConfig({
     // round-trip), which made cold boots under parallel load flaky, not
     // incorrect — this is I/O-bound headroom, not a hang.
     testTimeout: 20_000,
+    // Same reason, applied to the hooks that actually pay the boot cost:
+    // every PGlite suite creates its instance in `beforeEach`, and
+    // `hookTimeout` does NOT inherit from `testTimeout` — it stays at 10s.
+    // Slice 5b added three more PGlite-booting suites (session verifier,
+    // login, admin deactivation), and the extra parallel pressure started
+    // timing out cold boots in hooks while every assertion still passed.
+    hookTimeout: 20_000,
   },
 });
