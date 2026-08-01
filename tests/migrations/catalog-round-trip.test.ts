@@ -44,7 +44,8 @@ describe("catalog migration round trip (apply then rollback all)", () => {
     expect(await publicTableNames(testDb)).toEqual([]);
 
     // migrate() applies every journaled migration in folder order: the
-    // catalog schema (0000) and the identity schema (0001, added by M9).
+    // catalog schema (0000), the identity schema (0001, added by M9), and
+    // the auth pair (0002 users.password_hash, 0003 sessions — slice 5a).
     await migrate(testDb.db, { migrationsFolder: DRIZZLE_DIR });
 
     expect(await publicTableNames(testDb)).toEqual([
@@ -52,12 +53,18 @@ describe("catalog migration round trip (apply then rollback all)", () => {
       "plan_price",
       "price_tier",
       "service",
+      "sessions",
       "users",
     ]);
 
     const rolledBack = await rollbackAll(testDb.db, DRIZZLE_DIR);
 
-    expect(rolledBack).toEqual(["0001_groovy_smiling_tiger", "0000_catalog_schema"]);
+    expect(rolledBack).toEqual([
+      "0003_sessions",
+      "0002_identity_password_hash",
+      "0001_groovy_smiling_tiger",
+      "0000_catalog_schema",
+    ]);
     expect(await publicTableNames(testDb)).toEqual([]);
   });
 });

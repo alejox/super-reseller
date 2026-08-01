@@ -8,3 +8,5 @@
 export type UserId = string;
 export type ResellerId = string;
 export type PriceTierId = string;
+/** `sessions.id` — the value carried inside the session cookie. */
+export type SessionId = string;

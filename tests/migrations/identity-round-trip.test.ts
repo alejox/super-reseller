@@ -53,7 +53,19 @@ async function roleColumnUsesEnum(testDb: TestDb): Promise<boolean> {
   return Boolean(result.rows[0]?.exists);
 }
 
-describe("identity migration round trip (apply both, rollback one)", () => {
+async function usersHasPasswordHash(testDb: TestDb): Promise<boolean> {
+  const result = await testDb.db.execute<{ exists: boolean }>(
+    sql`SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public'
+        AND table_name = 'users'
+        AND column_name = 'password_hash'
+    ) AS exists`,
+  );
+  return Boolean(result.rows[0]?.exists);
+}
+
+describe("identity migration round trip (apply all, roll the identity stack back step by step)", () => {
   let testDb: TestDb;
 
   beforeEach(async () => {
@@ -64,25 +76,38 @@ describe("identity migration round trip (apply both, rollback one)", () => {
     await closeTestDb(testDb);
   });
 
-  it("applies catalog + identity migrations, then rolls back only the identity migration", async () => {
+  it("applies catalog + identity migrations, then rolls back the identity stack one migration at a time", async () => {
     expect(await publicTableNames(testDb)).toEqual([]);
     expect(await userRoleTypeExists(testDb)).toBe(false);
 
     await migrate(testDb.db, { migrationsFolder: DRIZZLE_DIR });
 
-    // Both migrations applied: catalog tables still present, users added
-    // with its role column wired to the user_role enum.
+    // Every migration applied: catalog tables still present, users added
+    // with its role column wired to the user_role enum, plus the slice-5a
+    // auth pair (0002 users.password_hash, 0003 sessions).
     expect(await publicTableNames(testDb)).toEqual([
       "plan",
       "plan_price",
       "price_tier",
       "service",
+      "sessions",
       "users",
     ]);
     expect(await userRoleTypeExists(testDb)).toBe(true);
     expect(await roleColumnUsesEnum(testDb)).toBe(true);
+    expect(await usersHasPasswordHash(testDb)).toBe(true);
 
-    // Single-step rollback — the exact path `npm run db:rollback` uses.
+    // Single-step rollbacks — the exact path `npm run db:rollback` uses.
+    // The auth pair is TWO migrations, not one, precisely because each down
+    // file must be a single statement: dropping the sessions table and
+    // dropping the users column cannot share one.
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0003_sessions");
+    expect(await publicTableNames(testDb)).toContain("users");
+    expect(await publicTableNames(testDb)).not.toContain("sessions");
+
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0002_identity_password_hash");
+    expect(await usersHasPasswordHash(testDb)).toBe(false);
+
     const rolledBack = await rollbackLast(testDb.db, DRIZZLE_DIR);
 
     expect(rolledBack).toEqual("0001_groovy_smiling_tiger");

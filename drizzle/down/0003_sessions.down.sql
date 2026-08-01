@@ -1,0 +1,13 @@
+-- Hand-authored down migration for 0003_sessions.sql (design.md: "Decision:
+-- hand-authored down migrations").
+--
+-- One statement, as the migrator requires (src/shared/db/migrator.ts runs
+-- this file as a single prepared statement). Both the FK constraint and
+-- `sessions_user_id_idx` belong to the table, so they go with it — no
+-- separate DROP INDEX is needed, and adding one would break the
+-- single-statement rule.
+--
+-- Sessions are ephemeral by construction (7-day absolute expiry), so unlike
+-- 0002 this rollback destroys nothing that outlives a week: every user is
+-- simply logged out.
+DROP TABLE IF EXISTS "sessions";

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { priceTier } from "../../catalog/infrastructure/catalog.schema";
 
@@ -31,6 +31,10 @@ export const users = pgTable(
   {
     id: uuid("id").primaryKey(),
     email: text("email").notNull(),
+    // argon2id PHC string (design.md "Auth and Session"). NOT NULL: there is
+    // no passwordless path in this change, so a credential-less user row is
+    // not a state the application should be able to represent.
+    passwordHash: text("password_hash").notNull(),
     role: userRole("role").notNull(),
     resellerId: uuid("reseller_id"),
     // IT: Price Tier Deletion Guard — ON DELETE RESTRICT, enforced by the
@@ -61,4 +65,34 @@ export const users = pgTable(
       sql`(${table.role} = 'RESELLER' AND ${table.priceTierId} IS NOT NULL) OR (${table.role} = 'ADMIN' AND ${table.priceTierId} IS NULL)`,
     ),
   ],
+);
+
+/**
+ * DB-backed sessions (AUTH: Login Issues a DB-Backed Session). The row —
+ * not the signed cookie — is the authority: a stateless token cannot be
+ * revoked, and revocation on deactivation is a requirement here.
+ *
+ * `ON DELETE CASCADE` (unlike `price_tier_id`'s RESTRICT): a session has no
+ * value without its user, and users are soft-deleted anyway, so a cascade
+ * can only ever fire on a genuine hard delete.
+ *
+ * No IP and no user-agent columns — Ley 1581 data minimization (design.md
+ * "Schema"). `revoked_at` is the revocation marker; a session is valid only
+ * while `revoked_at IS NULL AND expires_at > now()` and its user is active.
+ */
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: uuid("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+  },
+  // Revocation updates every active session of one user (design.md
+  // "Revocation"), which is a `WHERE user_id = $1` write on every
+  // deactivation — the one access path that justifies its own index.
+  (table) => [index("sessions_user_id_idx").on(table.userId)],
 );

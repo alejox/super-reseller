@@ -100,8 +100,10 @@ function pgliteAdapter(): Adapter {
         sql`INSERT INTO price_tier (id, code, name, created_at) VALUES (${TIER_ID}, 'SEED', 'Seed tier', now())`,
       );
       for (const row of [...ROWS_A, ...ROWS_B, ROW_PLATFORM]) {
+        // `password_hash` is NOT NULL (drizzle/0002); a stand-in PHC string
+        // keeps this suite about isolation, which is what it proves.
         await testDb.db.execute(
-          sql`INSERT INTO users (id, email, role, reseller_id, price_tier_id, created_at) VALUES (${row.id}, ${row.email}, ${row.role}, ${row.resellerId}, ${row.role === "RESELLER" ? TIER_ID : null}, now())`,
+          sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${row.id}, ${row.email}, '$argon2id$stand-in', ${row.role}, ${row.resellerId}, ${row.role === "RESELLER" ? TIER_ID : null}, now())`,
         );
       }
     },

@@ -34,8 +34,11 @@ async function insertUser(
   role: string,
   priceTierId?: string,
 ): Promise<void> {
+  // `password_hash` is NOT NULL (drizzle/0002): a stand-in PHC string keeps
+  // these schema tests about the constraints they actually assert. Real
+  // argon2id output is exercised in node-rs-argon2-hasher.test.ts.
   await testDb.db.execute(
-    sql`INSERT INTO users (id, email, role, price_tier_id, created_at) VALUES (${id}, ${email}, ${role}, ${priceTierId ?? null}, now())`,
+    sql`INSERT INTO users (id, email, password_hash, role, price_tier_id, created_at) VALUES (${id}, ${email}, '$argon2id$stand-in', ${role}, ${priceTierId ?? null}, now())`,
   );
 }
 

@@ -15,6 +15,20 @@
       "when": 1785559275964,
       "tag": "0001_groovy_smiling_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785592026132,
+      "tag": "0002_identity_password_hash",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785592031797,
+      "tag": "0003_sessions",
+      "breakpoints": true
     }
   ]
 }
