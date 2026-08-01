@@ -1,0 +1,24 @@
+-- Hand-authored down migration for 0001_groovy_smiling_tiger.sql (design.md:
+-- "Decision: hand-authored down migrations").
+--
+-- A single DROP TABLE statement, not two: the migrator's rollbackLast()
+-- runs the whole file as one prepared statement (src/shared/db/migrator.ts),
+-- and PGlite/Postgres reject multiple `;`-separated commands in a single
+-- prepared statement ("cannot insert multiple commands into a prepared
+-- statement" — confirmed empirically against this exact migration, see
+-- tests/migrations/identity-round-trip.test.ts).
+--
+-- DOCUMENTED LIMITATION: the user_role enum survives this rollback. No
+-- single-statement form drops both:
+--   - DROP TYPE "user_role" CASCADE; was tested and REJECTED: it drops the
+--     type but leaves the users table behind as a shell — the dependency
+--     recursion removes only the role column, the rest of the table
+--     survives.
+--   - DROP TABLE ...; DROP TYPE ...; is the correct pair but the harness
+--     cannot run it as one prepared statement.
+-- The orphaned enum is harmless (nothing references it) EXCEPT for one
+-- operational caveat: re-running `db:migrate` on the SAME database after
+-- this rollback fails at "type user_role already exists" (0001 creates it
+-- without IF NOT EXISTS). Migrate forward again only on a fresh database,
+-- or drop the enum manually first.
+DROP TABLE IF EXISTS "users";

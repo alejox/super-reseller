@@ -10,3 +10,4 @@
  * aliases the way Vitest does via `vite-tsconfig-paths`.
  */
 export * from "../../modules/catalog/infrastructure/catalog.schema";
+export * from "../../modules/identity/infrastructure/identity.schema";

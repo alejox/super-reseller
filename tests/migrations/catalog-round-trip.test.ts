@@ -40,16 +40,24 @@ describe("catalog migration round trip (apply then rollback all)", () => {
     await closeTestDb(testDb);
   });
 
-  it("applies the catalog migration, then rolls it back, leaving public schema empty", async () => {
+  it("applies all real migrations, then rolls them all back, leaving public schema empty", async () => {
     expect(await publicTableNames(testDb)).toEqual([]);
 
+    // migrate() applies every journaled migration in folder order: the
+    // catalog schema (0000) and the identity schema (0001, added by M9).
     await migrate(testDb.db, { migrationsFolder: DRIZZLE_DIR });
 
-    expect(await publicTableNames(testDb)).toEqual(["plan", "plan_price", "price_tier", "service"]);
+    expect(await publicTableNames(testDb)).toEqual([
+      "plan",
+      "plan_price",
+      "price_tier",
+      "service",
+      "users",
+    ]);
 
     const rolledBack = await rollbackAll(testDb.db, DRIZZLE_DIR);
 
-    expect(rolledBack).toEqual(["0000_catalog_schema"]);
+    expect(rolledBack).toEqual(["0001_groovy_smiling_tiger", "0000_catalog_schema"]);
     expect(await publicTableNames(testDb)).toEqual([]);
   });
 });

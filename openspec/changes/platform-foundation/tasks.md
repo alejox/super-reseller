@@ -79,21 +79,21 @@ Chain strategy: pending
 
 ## Phase 4: Identity/Tenancy Schema + AccessScope (PR4, ~250 lines)
 
-- [ ] 4.1 RED: persisting role `"SUPERADMIN"` fails validation (IT: Exactly One Role Per User)
-- [ ] 4.2 GREEN: `user_role` enum, `users` table, role CHECK
-- [ ] 4.3 RED: creating a second user with an existing email fails uniqueness (IT: Globally Unique Email)
-- [ ] 4.4 GREEN: `users_email_lower_uniq` functional unique index
-- [ ] 4.5 RED: type-level negative fixture in `tests/types/` proves an object literal cannot satisfy `AccessScope` and unscoped repository construction fails to compile
-- [ ] 4.6 GREEN: `src/modules/identity/domain/access-scope.ts` — brand symbol declared, NOT exported; `mintAdminScope`/`mintResellerScope` lint-restricted to `dal.ts`
-- [ ] 4.7 GREEN: `shared/db/tenant.ts` `tenantWhere(table, scope)` typed to require a `reseller_id` column; repository factory `for<S extends AccessScope>` returning role-narrowed repository types (IT: Single-Level Reseller Ownership — no `parent_id` column)
-- [ ] 4.8 RED: reseller B's scoped query returns none of reseller A's rows; ADMIN-scoped query returns rows from every reseller (IT: Reseller Row Isolation) — contract suite over {fake, PGlite}
-- [ ] 4.9 GREEN: scoped catalog/identity repository queries force `tenantWhere` in every read path
-- [ ] 4.10 RED: activating a RESELLER with no assigned price tier fails (IT: One Price Tier Per Reseller)
-- [ ] 4.11 GREEN: `users_reseller_requires_tier` CHECK + activation guard
-- [ ] 4.12 RED: deleting a price tier with assigned resellers fails, tier remains (IT: Price Tier Deletion Guard)
-- [ ] 4.13 GREEN: `ON DELETE RESTRICT` on `users.price_tier_id`
-- [ ] 4.14 RED: deactivating a reseller marks them inactive, not removed; owned rows remain (IT: Reseller Deactivation Preserves Data)
-- [ ] 4.15 GREEN: `deactivated_at` soft delete on `users`
+- [x] 4.1 RED: persisting role `"SUPERADMIN"` fails validation (IT: Exactly One Role Per User)
+- [x] 4.2 GREEN: `user_role` enum, `users` table, role CHECK
+- [x] 4.3 RED: creating a second user with an existing email fails uniqueness (IT: Globally Unique Email)
+- [x] 4.4 GREEN: `users_email_lower_uniq` functional unique index
+- [x] 4.5 RED: type-level negative fixture in `tests/types/` proves an object literal cannot satisfy `AccessScope` and unscoped repository construction fails to compile
+- [x] 4.6 GREEN: `src/modules/identity/domain/access-scope.ts` — brand symbol declared, NOT exported; `mintAdminScope`/`mintResellerScope` lint-restricted to `dal.ts`
+- [x] 4.7 GREEN: `shared/db/tenant.ts` `tenantWhere(table, scope)` typed to require a `reseller_id` column; repository factory `for<S extends AccessScope>` returning role-narrowed repository types (IT: Single-Level Reseller Ownership — no `parent_id` column)
+- [x] 4.8 RED: reseller B's scoped query returns none of reseller A's rows; ADMIN-scoped query returns rows from every reseller (IT: Reseller Row Isolation) — contract suite over {fake, PGlite}
+- [x] 4.9 GREEN: scoped catalog/identity repository queries force `tenantWhere` in every read path
+- [x] 4.10 RED: activating a RESELLER with no assigned price tier fails (IT: One Price Tier Per Reseller)
+- [x] 4.11 GREEN: `users_reseller_requires_tier` CHECK + activation guard
+- [x] 4.12 RED: deleting a price tier with assigned resellers fails, tier remains (IT: Price Tier Deletion Guard)
+- [x] 4.13 GREEN: `ON DELETE RESTRICT` on `users.price_tier_id`
+- [x] 4.14 RED: deactivating a reseller marks them inactive, not removed; owned rows remain (IT: Reseller Deactivation Preserves Data)
+- [x] 4.15 GREEN: `deactivated_at` soft delete on `users`
 
 ## Phase 5a: Password Hashing + Session Store + Signing (PR5a, ~230 lines)
 

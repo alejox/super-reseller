@@ -27,6 +27,29 @@ export type SellablePlan = Readonly<{
 }>;
 
 /**
+ * Role-narrowed catalog repository surfaces (design.md "Decision:
+ * AccessScope is an opaque branded token minted only by the DAL":
+ * "admin-only capability is removed from the *type* under a reseller
+ * scope"). `CatalogRepositoryFactory.for` (identity/infrastructure)
+ * selects between them by scope kind: an ADMIN scope gets the full
+ * unscoped surface, a RESELLER scope a sellable-only surface where the
+ * tier is read from the scope and NEVER accepted as a parameter — "price
+ * me at the cheapest tier" is not expressible.
+ */
+
+/** The ADMIN surface is the full unscoped port: every row, any tier. */
+export type AdminCatalogRepository = CatalogRepository;
+
+/**
+ * The RESELLER surface: sellable plans only, tier-free. No admin
+ * capability (create/retire/set price) is reachable through this type.
+ */
+export interface ResellerCatalogRepository {
+  listSellablePlans(): Promise<readonly SellablePlan[]>;
+  findSellablePlan(planId: PlanId): Promise<SellablePlan | null>;
+}
+
+/**
  * Unscoped catalog repository port for slice 3b. `AccessScope` (slice 4)
  * will wrap the reseller-facing surface so `priceTierId` is read from the
  * scope instead of accepted as a caller-supplied parameter — see design.md

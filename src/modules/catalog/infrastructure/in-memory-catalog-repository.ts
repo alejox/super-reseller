@@ -115,4 +115,23 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
     return { plan, price: planPriceAmount(current), planPriceId: current.id };
   }
+
+  /**
+   * Non-port helper for the reseller surface (4.8–4.9): every plan
+   * sellable at exactly ONE tier, mirroring the Drizzle reseller adapter's
+   * `plan ⋈ plan_price WHERE tier = ? AND effective_to IS NULL` join —
+   * a plan without a current price at `tierId` yields no entry, so a
+   * fallback to another tier's price is not representable.
+   */
+  async listSellablePlansForTier(tierId: PriceTierId): Promise<readonly SellablePlan[]> {
+    return [...this.plans.values()].flatMap((plan) => {
+      const planPrices = this.prices.filter((price) => price.planId === plan.id);
+      if (!isPlanSellableAtTier(planPrices, tierId)) return [];
+
+      const current = resolveCurrentPriceForTier(planPrices, tierId);
+      if (!current) return [];
+
+      return [{ plan, price: planPriceAmount(current), planPriceId: current.id }];
+    });
+  }
 }

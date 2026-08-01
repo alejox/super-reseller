@@ -48,6 +48,26 @@ const noIdentityEntityImport = {
   ],
 };
 
+// AccessScope minters are restricted to the DAL (design.md: "the only
+// producers are mintAdminScope/mintResellerScope, and lint restricts
+// importing them to identity/application/dal.ts"). `importNames` keeps the
+// AccessScope TYPE importable everywhere — shared/db/tenant.ts and the 4.7
+// repository factory need the type — while sealing the mint functions
+// themselves. This restriction lives in EVERY zone below (plus a catch-all
+// first), because flat config REPLACES a rule's options when two matching
+// configs both set it; dal.ts is the single exception, re-declared later
+// without this restriction.
+const noMintersOutsideDal = {
+  paths: [
+    {
+      name: "@/modules/identity/domain/access-scope",
+      importNames: ["mintAdminScope", "mintResellerScope"],
+      message:
+        "AccessScope minters may only be imported by src/modules/identity/application/dal.ts — the DAL mints scopes from a DB-verified session row.",
+    },
+  ],
+};
+
 // NOTE: each files-glob below is mutually exclusive by design. ESLint flat
 // config REPLACES (not merges) a rule's options when two matching configs
 // both set the same rule name — a `domain/**` zone and a broader
@@ -65,13 +85,22 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Catch-all first: everywhere EXCEPT the zones below (and dal.ts, which
+  // is re-declared after its zone), importing an AccessScope minter is an
+  // error.
+  {
+    files: ["**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", noMintersOutsideDal],
+    },
+  },
   {
     files: ["src/modules/identity/domain/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
-          paths: [...noDrizzleInDomain.paths],
+          paths: [...noDrizzleInDomain.paths, ...noMintersOutsideDal.paths],
           patterns: [
             ...noDrizzleInDomain.patterns,
             ...noCatalogEntityImport.patterns,
@@ -85,6 +114,34 @@ const eslintConfig = defineConfig([
       "src/modules/identity/{application,infrastructure}/**/*.{ts,tsx}",
     ],
     rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noMintersOutsideDal.paths],
+          patterns: [...noCatalogEntityImport.patterns],
+        },
+      ],
+    },
+  },
+  // The repository factory is the sanctioned cross-module gate: it consumes
+  // identity's unforgeable AccessScope and returns catalog's role-narrowed
+  // repository PORT types — interfaces, not entity types, so design.md's
+  // "no module imports another module's entity type" boundary is untouched.
+  // Declared AFTER the identity/{application,infrastructure} zone so it
+  // replaces that zone's rule for this one file (keeping the
+  // AccessScope-minter restriction).
+  {
+    files: ["src/modules/identity/infrastructure/repository-factory.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: [...noMintersOutsideDal.paths] }],
+    },
+  },
+  // The single sanctioned minter importer: the DAL. Declared AFTER the
+  // application/infrastructure zone so it replaces that zone's rule for
+  // this one file (dropping only the mint restriction, keeping the rest).
+  {
+    files: ["src/modules/identity/application/dal.ts"],
+    rules: {
       "no-restricted-imports": ["error", noCatalogEntityImport],
     },
   },
@@ -94,7 +151,7 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": [
         "error",
         {
-          paths: [...noDrizzleInDomain.paths],
+          paths: [...noDrizzleInDomain.paths, ...noMintersOutsideDal.paths],
           patterns: [
             ...noDrizzleInDomain.patterns,
             ...noIdentityEntityImport.patterns,
@@ -106,7 +163,28 @@ const eslintConfig = defineConfig([
   {
     files: ["src/modules/catalog/{application,infrastructure}/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", noIdentityEntityImport],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noMintersOutsideDal.paths],
+          patterns: [...noIdentityEntityImport.patterns],
+        },
+      ],
+    },
+  },
+  // Test files are the second sanctioned AccessScope minting site: the
+  // minters' "dal.ts only" seal protects PRODUCTION code paths from forging
+  // scopes, but the isolation contract suite (4.8) and the reseller-surface
+  // suite (4.9) must mint REAL scopes at runtime to exercise
+  // `factory.for(scope)` and the scoped adapters. Because flat config
+  // REPLACES a rule's options when two matching configs both set it, this
+  // LAST zone drops every import restriction for tests — they may cross
+  // module boundaries and import drizzle freely; every production zone
+  // above is untouched.
+  {
+    files: ["tests/**/*.{ts,tsx}", "**/*.{test,spec}.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ]);

@@ -8,6 +8,13 @@
       "when": 1785552116848,
       "tag": "0000_catalog_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785559275964,
+      "tag": "0001_groovy_smiling_tiger",
+      "breakpoints": true
     }
   ]
 }
