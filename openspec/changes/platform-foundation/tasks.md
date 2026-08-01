@@ -54,13 +54,13 @@ Chain strategy: pending
 
 ## Phase 3a: Money Value Object (PR3a, ~120 lines)
 
-- [ ] 3a.1 RED: `money()` throws on non-integer amount or missing currency (EB: Money Is Integer Minor Units With Currency)
-- [ ] 3a.2 GREEN: `src/shared/money/money.ts` — frozen `Money` type + `money()` guarded by `Number.isSafeInteger`
-- [ ] 3a.3 RED: `addMoney`/`subtractMoney` throw `CurrencyMismatchError` on differing currency codes
-- [ ] 3a.4 GREEN: implement `addMoney`, `subtractMoney`
-- [ ] 3a.5 RED: `multiplyMoney` rejects a non-integer factor; exact result for an integer factor
-- [ ] 3a.6 GREEN: implement `multiplyMoney`, `compareMoney`, `isZero`, `isNegative`, `formatMoney`
-- [ ] 3a.7 REFACTOR: confirm no class/function crosses the module boundary — plain data only
+- [x] 3a.1 RED: `money()` throws on non-integer amount or missing currency (EB: Money Is Integer Minor Units With Currency)
+- [x] 3a.2 GREEN: `src/shared/money/money.ts` — frozen `Money` type + `money()` guarded by `Number.isSafeInteger`
+- [x] 3a.3 RED: `addMoney`/`subtractMoney` throw `CurrencyMismatchError` on differing currency codes
+- [x] 3a.4 GREEN: implement `addMoney`, `subtractMoney`
+- [x] 3a.5 RED: `multiplyMoney` rejects a non-integer factor; exact result for an integer factor
+- [x] 3a.6 GREEN: implement `multiplyMoney`, `compareMoney`, `isZero`, `isNegative`, `formatMoney`
+- [x] 3a.7 REFACTOR: confirm no class/function crosses the module boundary — plain data only
 
 ## Phase 3b: Catalog Domain + Schema (PR3b, ~290 lines)
 
