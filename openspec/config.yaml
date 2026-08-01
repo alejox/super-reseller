@@ -1,0 +1,62 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Next.js 16.2.12 (App Router), React 19.2.4, Tailwind CSS 4,
+  TypeScript 5, ESLint 9. Package manager: npm.
+  Architecture: bare create-next-app starter, no app modules yet.
+  Testing: no runner installed; intended runner is Vitest + React Testing Library.
+  Intent: streaming-reseller platform (storefront, admin panel, credit
+  wallet, credentials inventory, subscription-expiry engine).
+
+strict_tdd: true
+
+testing:
+  test_runner: none-installed
+  intended_framework: vitest
+  intended_component_testing: "@testing-library/react"
+  test_command: "npm test"
+  coverage_command: ""
+  linter_command: "npm run lint"
+  type_check_command: "npx tsc --noEmit"
+  formatter_command: ""
+  notes: |
+    No test runner is installed yet. Strict TDD is enabled globally, so
+    installing Vitest + React Testing Library and wiring `npm test` is a
+    required setup task before/at the start of the first feature change.
+    Do not treat the missing runner as a phase blocker for sdd-init itself.
+
+conventions:
+  next_version: "16.2.12 (breaking changes vs Next 14/15 — do not assume prior conventions)"
+  next16_notes:
+    - "middleware.ts is replaced by proxy.ts"
+    - "cookies() and headers() are async APIs"
+    - "Cache Components model: cacheComponents: true + the \"use cache\" directive is the current caching approach"
+  reference: "Consult node_modules/next/dist/docs/ before writing routing, caching, or middleware/proxy code."
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Flag any change touching payments, credentials storage, or credit wallet balances as high risk
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows (e.g. credit wallet transactions, subscription expiry jobs)
+    - Document architecture decisions with rationale
+    - Confirm design against Next.js 16 conventions (proxy.ts, async cookies()/headers(), Cache Components)
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+    - Include installing the Vitest + React Testing Library test runner as an explicit early task if not already present
+  apply:
+    guidelines:
+      - Follow existing code patterns
+      - Follow Next.js 16 conventions from node_modules/next/dist/docs/, not Next 14/15 training-data defaults
+    tdd: true
+    test_command: "npm test"
+  verify:
+    test_command: "npm test"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
