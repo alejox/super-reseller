@@ -64,18 +64,18 @@ Chain strategy: pending
 
 ## Phase 3b: Catalog Domain + Schema (PR3b, ~290 lines)
 
-- [ ] 3b.1 RED: plan's duration reads from `duration_days`, independent of display name (CAT: Duration Is a First-Class Field)
-- [ ] 3b.2 GREEN: `plan` domain entity + Drizzle `plan` table (`duration_days`, `kind` CHECK `SCREEN|FULL_ACCOUNT`, `plan_identity_uniq`)
-- [ ] 3b.3 RED: same plan resolves different absolute price for tier A vs tier B (CAT: Per-Tier Absolute Pricing)
-- [ ] 3b.4 GREEN: `plan_price` table + tier-scoped price resolution repository method
-- [ ] 3b.5 RED: plan with no tier-B price row is reported unsellable at tier B, no fallback to tier A (CAT: Missing Tier Price Blocks Sale)
-- [ ] 3b.6 GREEN: implement sellability check as inner join, no fallback path
-- [ ] 3b.7 RED: retiring a service keeps its plans readable with prices intact (CAT: Service Retirement Preserves Plans)
-- [ ] 3b.8 GREEN: `service` table + `retired_at` soft delete, `ON DELETE RESTRICT` on `plan.service_id`
-- [ ] 3b.9 RED: setting a new price for a plan/tier leaves the prior price row stored and individually addressable (CAT: Price History Is Preserved)
-- [ ] 3b.10 GREEN: `effective_from`/`effective_to` close-out logic + `plan_price_current_uniq` partial unique index
-- [ ] 3b.11 Verify: schema inspection test confirms no `StockAccount`, `ProfileSlot`, `Subscription`, or credential column exists (CAT: No Inventory or Subscription Entities)
-- [ ] 3b.12 GREEN: catalog contract test suite parametrized over {in-memory fake, PGlite adapter} — same assertions run twice
+- [x] 3b.1 RED: plan's duration reads from `duration_days`, independent of display name (CAT: Duration Is a First-Class Field)
+- [x] 3b.2 GREEN: `plan` domain entity + Drizzle `plan` table (`duration_days`, `kind` CHECK `SCREEN|FULL_ACCOUNT`, `plan_identity_uniq`)
+- [x] 3b.3 RED: same plan resolves different absolute price for tier A vs tier B (CAT: Per-Tier Absolute Pricing)
+- [x] 3b.4 GREEN: `plan_price` table + tier-scoped price resolution repository method
+- [x] 3b.5 RED: plan with no tier-B price row is reported unsellable at tier B, no fallback to tier A (CAT: Missing Tier Price Blocks Sale)
+- [x] 3b.6 GREEN: implement sellability check as inner join, no fallback path
+- [x] 3b.7 RED: retiring a service keeps its plans readable with prices intact (CAT: Service Retirement Preserves Plans)
+- [x] 3b.8 GREEN: `service` table + `retired_at` soft delete, `ON DELETE RESTRICT` on `plan.service_id`
+- [x] 3b.9 RED: setting a new price for a plan/tier leaves the prior price row stored and individually addressable (CAT: Price History Is Preserved)
+- [x] 3b.10 GREEN: `effective_from`/`effective_to` close-out logic + `plan_price_current_uniq` partial unique index
+- [x] 3b.11 Verify: schema inspection test confirms no `StockAccount`, `ProfileSlot`, `Subscription`, or credential column exists (CAT: No Inventory or Subscription Entities)
+- [x] 3b.12 GREEN: catalog contract test suite parametrized over {in-memory fake, PGlite adapter} — same assertions run twice
 
 ## Phase 4: Identity/Tenancy Schema + AccessScope (PR4, ~250 lines)
 

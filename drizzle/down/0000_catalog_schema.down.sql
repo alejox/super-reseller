@@ -1,0 +1,12 @@
+-- Hand-authored down migration for 0000_catalog_schema.sql (design.md:
+-- "Decision: hand-authored down migrations").
+--
+-- A single multi-table DROP TABLE, not four separate statements: the
+-- migrator's rollbackLast() runs the whole file as one prepared statement
+-- (src/shared/db/migrator.ts), and PGlite/Postgres reject multiple
+-- `;`-separated commands in a single prepared statement ("cannot insert
+-- multiple commands into a prepared statement" — confirmed by running this
+-- migration's own round-trip test). A single DROP TABLE naming all four
+-- tables drops them together in one command, so FK dependency order
+-- between them does not matter.
+DROP TABLE IF EXISTS "plan_price", "plan", "price_tier", "service";
