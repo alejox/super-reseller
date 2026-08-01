@@ -97,24 +97,24 @@ Chain strategy: pending
 
 ## Phase 5a: Password Hashing + Session Store + Signing (PR5a, ~230 lines)
 
-- [ ] 5a.1 RED: argon2id hash/verify round trip with reduced test parameters succeeds; wrong password fails
-- [ ] 5a.2 GREEN: `PasswordHasher` port + `@node-rs/argon2` adapter (`m=19456, t=2, p=1`), production params injected separately from test params
-- [ ] 5a.3 RED: login against an unknown email still performs one verify against a dummy hash (no timing difference vs known email)
-- [ ] 5a.4 GREEN: implement constant-path login verification
-- [ ] 5a.5 RED: `jose` sign/verify round trip succeeds; tampered token rejected; expired token rejected; `alg: none` rejected
-- [ ] 5a.6 GREEN: session signing module — `SignJWT` HS256, `jwtVerify` with pinned `algorithms: ['HS256']`, `SESSION_SECRET` read only inside this module
-- [ ] 5a.7 RED: a successful login persists a `sessions` row (AUTH: Login Issues a DB-Backed Session)
-- [ ] 5a.8 GREEN: `sessions` table + repository insert (`user_id`, `expires_at`, no IP/user-agent)
+- [x] 5a.1 RED: argon2id hash/verify round trip with reduced test parameters succeeds; wrong password fails
+- [x] 5a.2 GREEN: `PasswordHasher` port + `@node-rs/argon2` adapter (`m=19456, t=2, p=1`), production params injected separately from test params
+- [x] 5a.3 RED: login against an unknown email still performs one verify against a dummy hash (no timing difference vs known email)
+- [x] 5a.4 GREEN: implement constant-path login verification
+- [x] 5a.5 RED: `jose` sign/verify round trip succeeds; tampered token rejected; expired token rejected; `alg: none` rejected
+- [x] 5a.6 GREEN: session signing module — `SignJWT` HS256, `jwtVerify` with pinned `algorithms: ['HS256']`, `SESSION_SECRET` read only inside this module
+- [x] 5a.7 RED: a successful login persists a `sessions` row (AUTH: Login Issues a DB-Backed Session)
+- [x] 5a.8 GREEN: `sessions` table + repository insert (`user_id`, `expires_at`, no IP/user-agent)
 
 ## Phase 5b: DAL + Server Action Authorization + Proxy (PR5b, ~220 lines)
 
-- [ ] 5b.1 RED: a DAL call without a valid session context throws/returns an authorization error, not data (AUTH: Data Access Layer Enforces Authorization)
-- [ ] 5b.2 GREEN: `src/modules/identity/application/dal.ts` (`import 'server-only'`) — `verifySession()`, `getScope()`, `requireRole()`, each wrapped in React `cache()`. MUST NOT use `"use cache"` — that directive is cross-request/durable and would keep a revoked session alive; add a code comment stating this explicitly
-- [ ] 5b.3 RED: after an ADMIN deactivates a user, the next request carrying that user's session cookie is rejected (AUTH: Deactivation Revokes Sessions)
-- [ ] 5b.4 GREEN: `deactivateUser` transaction — set `users.deactivated_at`, then revoke all active sessions for that user; `verifySession` rejects revoked/expired/deactivated
-- [ ] 5b.5 RED: an authenticated RESELLER session attempting an ADMIN-only operation is denied (AUTH: Role-Aware Authorization)
-- [ ] 5b.6 GREEN: `requireRole('ADMIN')` enforced in one representative admin-only Server Action
-- [ ] 5b.7 RED: a request that passed the `proxy.ts` cookie check still gets independently re-verified by the Server Action it reaches (AUTH: Proxy Performs an Optimistic Check Only)
-- [ ] 5b.8 GREEN: `proxy.ts` — cookie presence + `jwtVerify` signature + role-claim route table only, no DB access; code comment documents the accepted property that a validly-signed but revoked-session cookie passes proxy and is rejected by the DAL microseconds later
-- [ ] 5b.9 GREEN: login/logout Server Actions wire hashing, session signing, cookie set/clear
-- [ ] 5b.10 Verify: `npx tsc --noEmit` and `npm run lint` pass across the full change
+- [x] 5b.1 RED: a DAL call without a valid session context throws/returns an authorization error, not data (AUTH: Data Access Layer Enforces Authorization)
+- [x] 5b.2 GREEN: `src/modules/identity/application/dal.ts` (`import 'server-only'`) — `verifySession()`, `getScope()`, `requireRole()`, each wrapped in React `cache()`. MUST NOT use `"use cache"` — that directive is cross-request/durable and would keep a revoked session alive; add a code comment stating this explicitly
+- [x] 5b.3 RED: after an ADMIN deactivates a user, the next request carrying that user's session cookie is rejected (AUTH: Deactivation Revokes Sessions)
+- [x] 5b.4 GREEN: `deactivateUser` transaction — set `users.deactivated_at`, then revoke all active sessions for that user; `verifySession` rejects revoked/expired/deactivated
+- [x] 5b.5 RED: an authenticated RESELLER session attempting an ADMIN-only operation is denied (AUTH: Role-Aware Authorization)
+- [x] 5b.6 GREEN: `requireRole('ADMIN')` enforced in one representative admin-only Server Action
+- [x] 5b.7 RED: a request that passed the `proxy.ts` cookie check still gets independently re-verified by the Server Action it reaches (AUTH: Proxy Performs an Optimistic Check Only)
+- [x] 5b.8 GREEN: `proxy.ts` — cookie presence + `jwtVerify` signature + role-claim route table only, no DB access; code comment documents the accepted property that a validly-signed but revoked-session cookie passes proxy and is rejected by the DAL microseconds later
+- [x] 5b.9 GREEN: login/logout Server Actions wire hashing, session signing, cookie set/clear
+- [x] 5b.10 Verify: `npx tsc --noEmit` and `npm run lint` pass across the full change
