@@ -1,21 +1,30 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 
 import * as schema from "./schema";
 import type { ModuleDb } from "./module-db";
 
 /**
- * Neon HTTP driver: one statement per HTTP request, no transaction
- * continuity across calls. This is why Postgres RLS via `SET LOCAL` is
- * rejected for this change (design.md: "Postgres RLS is rejected"), and why
- * `DrizzleAccountAdministration` expresses its transaction as a single
- * statement with data-modifying CTEs.
+ * node-postgres over Supabase's connection pooler.
+ *
+ * `pg` was chosen over `postgres-js` (Drizzle's usual Supabase default) for
+ * one concrete reason: result shape. `db.execute()` on postgres-js returns a
+ * bare `RowList` array, while `pg` and PGlite both return an object carrying
+ * `.rows`. Every caller here — `migrator.ts`'s `RollbackableDb`,
+ * `DrizzleAccountAdministration`, the whole migration test suite — reads
+ * `.rows`, and `ModuleDb` unions the production and test handles into one
+ * type. `pg` keeps that union honest; postgres-js would have forced a rewrite
+ * of every call site to buy nothing.
+ *
+ * Unlike the previous Neon HTTP driver, this one DOES support transactions.
+ * Existing single-statement CTE writes stay as they are: they were correct on
+ * every driver, and still are.
  */
 function getDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error(
-      "DATABASE_URL is not set. Provision a Neon branch and export DATABASE_URL before using src/shared/db/client.",
+      "DATABASE_URL is not set. Copy the Supabase connection string (Transaction pooler, port 6543) into DATABASE_URL before using src/shared/db/client.",
     );
   }
   return url;
@@ -33,9 +42,20 @@ let client: ModuleDb | undefined;
  * requirement where it belongs: at runtime, in the request that actually
  * queries.
  *
- * The instance is memoized, so repeated calls share one client.
+ * The instance is memoized, so repeated calls share one pool. That memo is
+ * what makes a pool safe here: Vercel's Fluid Compute reuses a function
+ * instance across concurrent requests, so the pool is created once per
+ * instance rather than once per request.
  */
 export function getDb(): ModuleDb {
-  client ??= drizzle(neon(getDatabaseUrl()), { schema });
+  client ??= drizzle(
+    new Pool({
+      connectionString: getDatabaseUrl(),
+      // Supabase's transaction pooler already multiplexes across clients;
+      // a large per-instance pool on top of it just burns pooler slots.
+      max: 5,
+    }),
+    { schema },
+  );
   return client;
 }

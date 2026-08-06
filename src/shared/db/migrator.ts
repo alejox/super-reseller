@@ -14,7 +14,7 @@ import path from "node:path";
 const MIGRATIONS_SCHEMA = "drizzle";
 const MIGRATIONS_TABLE = "__drizzle_migrations";
 
-// Non-generic on purpose: PgliteDatabase#execute and NeonHttpDatabase#execute
+// Non-generic on purpose: PgliteDatabase#execute and NodePgDatabase#execute
 // return a `PgRaw<Results<TRow>>` thenable whose own `.then()` overload is
 // narrower than the plain `Promise` this interface would otherwise declare.
 // A generic `TRow` on this method makes TS treat that overload as unsound

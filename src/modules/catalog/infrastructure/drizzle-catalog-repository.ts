@@ -22,7 +22,7 @@ import {
 } from "./catalog.schema";
 
 /**
- * This repository must run unmodified against both `NeonHttpDatabase`
+ * This repository must run unmodified against both `NodePgDatabase`
  * (production) and `PgliteDatabase` (tests) — a concrete union of the two
  * driver-returned types, rather than `any` generics, mirrors the intent of
  * the `RollbackableDb` pattern already used in shared/db/migrator.ts for
@@ -134,15 +134,16 @@ export class DrizzleCatalogRepository implements CatalogRepository {
   }
 
   async setPlanPrice(input: SetPlanPriceInput): Promise<PlanPrice> {
-    // NOT wrapped in db.transaction(): the Neon HTTP driver has no
-    // transaction support at all (drizzle-orm's NeonHttpSession#transaction
-    // throws "No transactions support in neon-http driver" — the same
-    // driver constraint design.md already accepted for rejecting Postgres
-    // RLS via SET LOCAL). Two sequential statements instead: close out the
-    // current row, then insert the new one. A crash between the two leaves
-    // the (plan, tier) with zero current rows, never two — it fails safely
-    // toward "not sellable", and plan_price_current_uniq still guarantees
-    // at most one current row exists at any point.
+    // NOT wrapped in db.transaction(). Originally that was forced: the Neon
+    // HTTP driver had no transaction support. node-postgres does, so this is
+    // now a deliberate choice rather than a constraint — and it stays,
+    // because the failure mode is already safe. Two sequential statements:
+    // close out the current row, then insert the new one. A crash between
+    // the two leaves the (plan, tier) with zero current rows, never two — it
+    // fails safely toward "not sellable", and plan_price_current_uniq still
+    // guarantees at most one current row exists at any point. Keeping it
+    // transaction-free also keeps it correct on Supabase's transaction
+    // pooler, where a session-scoped transaction is not available.
     await this.db
       .update(planPriceTable)
       .set({ effectiveTo: new Date() })

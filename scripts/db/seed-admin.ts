@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 
 import * as schema from "../../src/shared/db/schema";
 import { provisionAdmin, MINIMUM_PASSWORD_LENGTH } from "../../src/modules/identity/application/admin/provision-admin";
@@ -23,7 +23,7 @@ async function main(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     throw new Error(
-      "DATABASE_URL is not set. Export it (a Neon branch connection string) before running db:seed-admin.",
+      "DATABASE_URL is not set. Export the Supabase session-pooler connection string (port 5432) before running db:seed-admin.",
     );
   }
 
@@ -36,29 +36,34 @@ async function main(): Promise<void> {
     );
   }
 
-  const db = drizzle(neon(databaseUrl), { schema });
+  const pool = new Pool({ connectionString: databaseUrl });
+  try {
+    const db = drizzle(pool, { schema });
 
-  const result = await provisionAdmin(
-    {
-      users: new DrizzleCredentialsRepository(db),
-      provisioning: new DrizzleUserProvisioning(db),
-      // Production parameters: this hash is the real credential, so it is
-      // never seeded with the cheap test parameters.
-      hasher: new NodeRsArgon2Hasher(PRODUCTION_HASHER_PARAMS),
-      newUserId: () => crypto.randomUUID(),
-    },
-    { email, password },
-  );
+    const result = await provisionAdmin(
+      {
+        users: new DrizzleCredentialsRepository(db),
+        provisioning: new DrizzleUserProvisioning(db),
+        // Production parameters: this hash is the real credential, so it is
+        // never seeded with the cheap test parameters.
+        hasher: new NodeRsArgon2Hasher(PRODUCTION_HASHER_PARAMS),
+        newUserId: () => crypto.randomUUID(),
+      },
+      { email, password },
+    );
 
-  if (!result.ok) {
-    const explanation =
-      result.reason === "email-taken"
-        ? `A user with the email ${email} already exists.`
-        : `ADMIN_PASSWORD must be at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
-    throw new Error(explanation);
+    if (!result.ok) {
+      const explanation =
+        result.reason === "email-taken"
+          ? `A user with the email ${email} already exists.`
+          : `ADMIN_PASSWORD must be at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
+      throw new Error(explanation);
+    }
+
+    console.log(`ADMIN created: ${result.user.email} (${result.user.id})`);
+  } finally {
+    await pool.end();
   }
-
-  console.log(`ADMIN created: ${result.user.email} (${result.user.id})`);
 }
 
 main().catch((error: unknown) => {

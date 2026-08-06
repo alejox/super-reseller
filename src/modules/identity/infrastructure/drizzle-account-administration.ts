@@ -27,12 +27,17 @@ type DeactivationRow = {
  *
  * design.md calls for a transaction, and a transaction is what this is —
  * but expressed as data-modifying CTEs rather than a client-side
- * `db.transaction()`. That is not a stylistic choice: the production driver
- * is `@neondatabase/serverless` over HTTP, and drizzle's neon-http session
- * throws "No transactions support in neon-http driver" (verified in
- * node_modules/drizzle-orm/neon-http/session.js). A single statement is
- * atomic on EVERY driver — Neon HTTP, Neon WebSocket, PGlite — so the
- * guarantee holds without pinning the deployment to one connection mode.
+ * `db.transaction()`.
+ *
+ * This originally worked around the Neon HTTP driver, which has no
+ * transaction support at all. That constraint is gone: production now runs
+ * node-postgres, which does support `db.transaction()`. The CTE form stays
+ * anyway, because it never depended on the constraint to be correct. A single
+ * statement is atomic on EVERY driver — node-postgres, PGlite, anything else
+ * this ever runs on — so the guarantee holds without pinning the deployment
+ * to one connection mode. Supabase's transaction pooler is exactly such a
+ * mode: it hands out a different backend per statement, which is safe here
+ * precisely because there is only one statement.
  *
  * Postgres executes data-modifying CTEs exactly once and to completion, and
  * both writes see the same snapshot, so the user cannot end up soft-deleted

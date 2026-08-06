@@ -8,7 +8,7 @@ import { planPriceAmount } from "../domain/plan-price";
 import { plan as planTable, planPrice as planPriceTable } from "./catalog.schema";
 
 /**
- * Runs unmodified against both `NeonHttpDatabase` (production) and
+ * Runs unmodified against both `NodePgDatabase` (production) and
  * `PgliteDatabase` (tests) — same pattern as `DrizzleCatalogRepository`.
  */
 type CatalogDb = ModuleDb;

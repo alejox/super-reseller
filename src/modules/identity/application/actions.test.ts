@@ -19,7 +19,7 @@
 //    here with the smallest possible in-memory cookie jar, implementing
 //    only the three methods `actions.ts` calls (`set`/`delete`/`get`).
 // 2. `@/shared/db/client`'s `getDb()` is a memoized singleton hardcoded to
-//    `drizzle-orm/neon-http` and requires a live `DATABASE_URL`; none is
+//    `drizzle-orm/node-postgres` and requires a live `DATABASE_URL`; none is
 //    provisioned in CI. Swapped for the SAME PGlite instance the rest of
 //    the identity suite already uses for this exact purpose — this fakes
 //    no SQL and no business logic, only which real Postgres the module
