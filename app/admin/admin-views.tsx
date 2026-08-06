@@ -9,6 +9,9 @@ export function AdminNavigation() {
       <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/catalog">
         Catálogo
       </Link>
+      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/resellers">
+        Revendedores
+      </Link>
     </nav>
   );
 }
@@ -29,10 +32,11 @@ export function AdminDashboardView() {
             <p className="mt-2 text-sm leading-6 text-zinc-600">La configuración del catálogo está disponible</p>
             <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir catálogo →</span>
           </Link>
-          <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 p-6">
-            <span className="text-lg font-semibold text-zinc-700">Revendedores</span>
-            <p className="mt-2 text-sm leading-6 text-zinc-500">La gestión de cuentas llegará en una próxima etapa.</p>
-          </div>
+          <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/resellers">
+            <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Revendedores</span>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">Cuentas y su nivel de precio</p>
+            <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir revendedores →</span>
+          </Link>
         </div>
       </section>
     </main>
