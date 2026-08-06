@@ -69,6 +69,7 @@ describe("catalog migration round trip (apply then rollback all)", () => {
       "service",
       "sessions",
       "users",
+      "wallet_entry",
     ]);
 
     // 0004 must cover EVERY table, not just the sensitive ones: a single
@@ -82,11 +83,18 @@ describe("catalog migration round trip (apply then rollback all)", () => {
       "service",
       "sessions",
       "users",
+      // 0005 had to enable this one itself. 0004 revoked Supabase's default
+      // GRANTs so a new table gets none, but RLS is per-table state that a
+      // freshly created table simply does not inherit — and drizzle-kit will
+      // never emit the line. This assertion is the tripwire for the next
+      // table someone adds without it.
+      "wallet_entry",
     ]);
 
     const rolledBack = await rollbackAll(testDb.db, DRIZZLE_DIR);
 
     expect(rolledBack).toEqual([
+      "0005_wallet_ledger",
       "0004_rls_lockdown",
       "0003_sessions",
       "0002_identity_password_hash",

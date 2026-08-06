@@ -172,6 +172,42 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Wallet gets the same two guards every other module has. Without an
+  // explicit zone the new module would fall through to the catch-all, which
+  // seals only the AccessScope minters — `wallet/domain` would be free to
+  // import Drizzle, and the ORM would leak into the domain layer of the one
+  // module that holds the money.
+  {
+    files: ["src/modules/wallet/domain/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noDrizzleInDomain.paths, ...noMintersOutsideDal.paths],
+          patterns: [
+            ...noDrizzleInDomain.patterns,
+            ...noIdentityEntityImport.patterns,
+            ...noCatalogEntityImport.patterns,
+          ],
+        },
+      ],
+    },
+  },
+  // `infrastructure/` may reference identity's SCHEMA for the `created_by`
+  // foreign key and its AccessScope TYPE for scoping — the same two things
+  // catalog's adapters already do. Entity types stay barred.
+  {
+    files: ["src/modules/wallet/{application,infrastructure}/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noMintersOutsideDal.paths],
+          patterns: [...noCatalogEntityImport.patterns],
+        },
+      ],
+    },
+  },
   // Test files are the second sanctioned AccessScope minting site: the
   // minters' "dal.ts only" seal protects PRODUCTION code paths from forging
   // scopes, but the isolation contract suite (4.8) and the reseller-surface

@@ -36,6 +36,13 @@
       "when": 1786031436786,
       "tag": "0004_rls_lockdown",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786035947209,
+      "tag": "0005_wallet_ledger",
+      "breakpoints": true
     }
   ]
 }

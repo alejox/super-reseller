@@ -1,0 +1,13 @@
+-- Hand-authored down migration for 0005_wallet_ledger.sql (design.md:
+-- "Decision: hand-authored down migrations").
+--
+-- One statement, as the migrator requires (src/shared/db/migrator.ts runs
+-- this file as a single prepared statement). The index, the CHECK
+-- constraints, the foreign key and the RLS flag all belong to the table, so
+-- they go with it — no separate DROP is needed, and adding one would break
+-- the single-statement rule.
+--
+-- Unlike 0003's sessions, this DOES destroy something that outlives a week:
+-- every recorded movement, and with it every balance. There is no `balance`
+-- column to survive the table, because the ledger IS the balance.
+DROP TABLE IF EXISTS "wallet_entry";

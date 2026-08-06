@@ -92,6 +92,7 @@ describe("identity migration round trip (apply all, roll the identity stack back
       "service",
       "sessions",
       "users",
+      "wallet_entry",
     ]);
     expect(await userRoleTypeExists(testDb)).toBe(true);
     expect(await roleColumnUsesEnum(testDb)).toBe(true);
@@ -100,6 +101,11 @@ describe("identity migration round trip (apply all, roll the identity stack back
     // Single-step rollbacks — the exact path `npm run db:rollback` uses.
     // 0004 sits on top of the identity stack and must come off first; it
     // touches no table structure, so the schema is unchanged after it.
+    // The wallet ledger comes off first: it references `users.created_by`,
+    // so the identity stack underneath it cannot be rolled back while it
+    // still exists.
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0005_wallet_ledger");
+
     expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0004_rls_lockdown");
     expect(await publicTableNames(testDb)).toContain("sessions");
 

@@ -11,3 +11,4 @@
  */
 export * from "../../modules/catalog/infrastructure/catalog.schema";
 export * from "../../modules/identity/infrastructure/identity.schema";
+export * from "../../modules/wallet/infrastructure/wallet.schema";
