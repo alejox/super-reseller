@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 
-import { createResellerAction } from "./actions";
+import { createResellerAction, topUpResellerAction } from "./actions";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100";
@@ -73,6 +73,59 @@ export function CreateResellerForm({ tiers }: Readonly<{ tiers: readonly TierOpt
         <p className="text-xs text-zinc-500">
           Entregue la contraseña por un canal seguro; no vuelve a mostrarse.
         </p>
+      </div>
+      {state !== undefined && (
+        <p className="text-sm font-medium text-red-600" role="alert">
+          {state.error}
+        </p>
+      )}
+    </form>
+  );
+}
+
+/**
+ * Credits one reseller's wallet. Rendered per row, so the reseller id is a
+ * hidden field rather than a select: the operator is already looking at the
+ * account they mean.
+ */
+export function TopUpForm({ resellerId }: Readonly<{ resellerId: string }>) {
+  const [state, action, pending] = useActionState(topUpResellerAction, undefined);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (!pending && state === undefined) {
+      formRef.current?.reset();
+    }
+  }, [state, pending]);
+
+  return (
+    <form action={action} className="flex flex-col gap-1" ref={formRef}>
+      <input name="resellerId" type="hidden" value={resellerId} />
+      <div className="flex items-center gap-1">
+        <input
+          aria-label="Monto a recargar"
+          className="w-28 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-950 focus:border-emerald-500 focus:outline-none"
+          inputMode="numeric"
+          min="1"
+          name="amountMinor"
+          placeholder="50000"
+          step="1"
+          type="number"
+        />
+        <input
+          aria-label="Referencia"
+          className="w-32 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-950 focus:border-emerald-500 focus:outline-none"
+          name="memo"
+          placeholder="Referencia"
+          type="text"
+        />
+        <button
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+          disabled={pending}
+          type="submit"
+        >
+          {pending ? "…" : "Recargar"}
+        </button>
       </div>
       {state !== undefined && (
         <p className="text-sm font-medium text-red-600" role="alert">

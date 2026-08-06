@@ -9,6 +9,8 @@ import { createDrizzleScopedCatalogRepositoryFactory } from "@/modules/identity/
 import type { ScopedUsersRepository } from "@/modules/identity/domain/scoped-users-repository";
 import type { CredentialsRepository } from "@/modules/identity/domain/credentials-repository";
 import type { UserProvisioning } from "@/modules/identity/domain/user-provisioning";
+import type { WalletRepository } from "@/modules/wallet/domain/wallet-repository";
+import { DrizzleWalletRepository } from "@/modules/wallet/infrastructure/drizzle-wallet-repository";
 import { getDb } from "@/shared/db/client";
 
 /**
@@ -26,6 +28,9 @@ export type AdminResellerDeps = Readonly<{
   credentials: CredentialsRepository;
   provisioning: UserProvisioning;
   catalog: AdminCatalogRepository;
+  wallet: WalletRepository;
+  /** The admin posting any ledger entry — a ledger nobody signed is unauditable. */
+  actorId: string;
 }>;
 
 export async function adminResellerDeps(): Promise<AdminResellerDeps> {
@@ -44,5 +49,7 @@ export async function adminResellerDeps(): Promise<AdminResellerDeps> {
     credentials: new DrizzleCredentialsRepository(db),
     provisioning: new DrizzleUserProvisioning(db),
     catalog: createDrizzleScopedCatalogRepositoryFactory(db).for(scope),
+    wallet: new DrizzleWalletRepository(db, scope),
+    actorId: scope.userId,
   };
 }

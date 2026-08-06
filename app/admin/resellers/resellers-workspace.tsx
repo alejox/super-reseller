@@ -1,5 +1,8 @@
+import { WALLET_CURRENCY } from "@/modules/wallet/application/admin/top-up-balance";
+import { formatMoney, money } from "@/shared/money/money";
+
 import { adminResellerDeps } from "./admin-resellers";
-import { CreateResellerForm } from "./reseller-form";
+import { CreateResellerForm, TopUpForm } from "./reseller-form";
 
 /**
  * The dynamic half of the resellers screen: it reads the session and the
@@ -14,9 +17,11 @@ const TD_CLASS = "px-3 py-2 text-sm text-zinc-800";
 export async function ResellersWorkspace() {
   const deps = await adminResellerDeps();
 
-  const [allUsers, tiers] = await Promise.all([
+  const [allUsers, tiers, balances] = await Promise.all([
     deps.users.listUsers(),
     deps.catalog.listPriceTiers(),
+    // One grouped query for every reseller's balance, not one per row.
+    deps.wallet.balancesByReseller(),
   ]);
 
   // An ADMIN scope reads every row, admins included; this screen is about
@@ -51,6 +56,8 @@ export async function ResellersWorkspace() {
                 <tr className="border-b border-zinc-200">
                   <th className={TH_CLASS} scope="col">Correo electrónico</th>
                   <th className={TH_CLASS} scope="col">Nivel</th>
+                  <th className={TH_CLASS} scope="col">Saldo</th>
+                  <th className={TH_CLASS} scope="col">Recargar</th>
                   <th className={TH_CLASS} scope="col">Estado</th>
                 </tr>
               </thead>
@@ -64,6 +71,22 @@ export async function ResellersWorkspace() {
                       <td className={`${TD_CLASS} font-medium text-zinc-950`}>{reseller.email}</td>
                       <td className={TD_CLASS}>
                         {tier ? `${tier.code} · ${tier.name}` : "—"}
+                      </td>
+                      <td className={`${TD_CLASS} font-semibold`}>
+                        {/* A reseller with no movements has no row in the
+                            ledger at all, and that is a zero balance rather
+                            than a missing one — there is no wallet record to
+                            create, so nothing can fall out of sync. */}
+                        {formatMoney(
+                          money(
+                            reseller.resellerId ? (balances.get(reseller.resellerId) ?? 0) : 0,
+                            WALLET_CURRENCY,
+                          ),
+                          "es-CO",
+                        )}
+                      </td>
+                      <td className={TD_CLASS}>
+                        {reseller.resellerId ? <TopUpForm resellerId={reseller.resellerId} /> : "—"}
                       </td>
                       <td className={TD_CLASS}>
                         {reseller.deactivatedAt === null ? "Activo" : "Desactivado"}
