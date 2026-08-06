@@ -22,13 +22,14 @@ import type { ResellerId, UserId, WalletEntryId } from "./ids";
  */
 
 /**
- * Why a movement happened. `TOPUP` is money the operator received;
- * `ADJUSTMENT` is a manual correction. Ordering will add its own kind when
- * a purchase debits the wallet — kinds are additive, which is why this is
- * a `text` CHECK and not a Postgres enum (values can never be removed from
- * an enum once shipped).
+ * Why a movement happened. `TOPUP` is money the operator received,
+ * `ADJUSTMENT` a manual correction, `ORDER_DEBIT` a purchase.
+ *
+ * Kinds are additive, which is why this is a `text` CHECK and not a Postgres
+ * enum — an enum value can never be removed once shipped. `ORDER_DEBIT` was
+ * added by the ordering module without touching a single existing row.
  */
-export type WalletEntryKind = "TOPUP" | "ADJUSTMENT";
+export type WalletEntryKind = "TOPUP" | "ADJUSTMENT" | "ORDER_DEBIT";
 
 export type WalletEntry = Readonly<{
   id: WalletEntryId;

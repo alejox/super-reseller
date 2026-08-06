@@ -208,6 +208,32 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // Ordering gets the same guards. Its `infrastructure/` legitimately
+  // references catalog, identity and wallet SCHEMAS for its four foreign
+  // keys — DDL is where foreign keys are declared — while entity types stay
+  // barred from `domain/`.
+  {
+    files: ["src/modules/ordering/domain/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noDrizzleInDomain.paths, ...noMintersOutsideDal.paths],
+          patterns: [
+            ...noDrizzleInDomain.patterns,
+            ...noIdentityEntityImport.patterns,
+            ...noCatalogEntityImport.patterns,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/modules/ordering/{application,infrastructure}/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", { paths: [...noMintersOutsideDal.paths] }],
+    },
+  },
   // Test files are the second sanctioned AccessScope minting site: the
   // minters' "dal.ts only" seal protects PRODUCTION code paths from forging
   // scopes, but the isolation contract suite (4.8) and the reseller-surface

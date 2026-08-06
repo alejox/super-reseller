@@ -46,7 +46,10 @@ export const walletEntry = pgTable(
     // the balance query degrades into a full scan as the ledger grows, and a
     // ledger only ever grows.
     index("wallet_entry_reseller_idx").on(table.resellerId, table.createdAt),
-    check("wallet_entry_kind_check", sql`${table.kind} IN ('TOPUP', 'ADJUSTMENT')`),
+    check(
+      "wallet_entry_kind_check",
+      sql`${table.kind} IN ('TOPUP', 'ADJUSTMENT', 'ORDER_DEBIT')`,
+    ),
     // A zero movement records nothing; it is noise in a statement a reseller
     // has to read, and the domain refuses it too.
     check("wallet_entry_amount_minor_check", sql`${table.amountMinor} <> 0`),

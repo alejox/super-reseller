@@ -89,6 +89,7 @@ describe("identity migration round trip (apply all, roll the identity stack back
       "plan",
       "plan_price",
       "price_tier",
+      "sales_order",
       "service",
       "sessions",
       "users",
@@ -101,6 +102,10 @@ describe("identity migration round trip (apply all, roll the identity stack back
     // Single-step rollbacks — the exact path `npm run db:rollback` uses.
     // 0004 sits on top of the identity stack and must come off first; it
     // touches no table structure, so the schema is unchanged after it.
+    // Orders come off before the ledger they debit, which comes off before
+    // the identity stack both reference.
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0006_sales_orders");
+
     // The wallet ledger comes off first: it references `users.created_by`,
     // so the identity stack underneath it cannot be rolled back while it
     // still exists.

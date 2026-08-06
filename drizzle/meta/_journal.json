@@ -43,6 +43,13 @@
       "when": 1786035947209,
       "tag": "0005_wallet_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1786043470264,
+      "tag": "0006_sales_orders",
+      "breakpoints": true
     }
   ]
 }

@@ -36,9 +36,14 @@ type DeactivationRow = {
  * anyway, because it never depended on the constraint to be correct. A single
  * statement is atomic on EVERY driver — node-postgres, PGlite, anything else
  * this ever runs on — so the guarantee holds without pinning the deployment
- * to one connection mode. Supabase's transaction pooler is exactly such a
- * mode: it hands out a different backend per statement, which is safe here
- * precisely because there is only one statement.
+ * to one connection mode.
+ *
+ * Correction to an earlier version of this comment: Supabase's transaction
+ * pooler DOES support multi-statement transactions — "transaction mode"
+ * holds one backend for the duration of a transaction rather than swapping
+ * per statement (verified against port 6543). The CTE form is kept because
+ * it is atomic without depending on that fact at all, not because a
+ * transaction was unavailable.
  *
  * Postgres executes data-modifying CTEs exactly once and to completion, and
  * both writes see the same snapshot, so the user cannot end up soft-deleted

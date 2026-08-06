@@ -66,6 +66,7 @@ describe("catalog migration round trip (apply then rollback all)", () => {
       "plan",
       "plan_price",
       "price_tier",
+      "sales_order",
       "service",
       "sessions",
       "users",
@@ -80,6 +81,8 @@ describe("catalog migration round trip (apply then rollback all)", () => {
       "plan",
       "plan_price",
       "price_tier",
+      // Every table added after 0004 has to enable RLS in its own migration.
+      "sales_order",
       "service",
       "sessions",
       "users",
@@ -94,6 +97,7 @@ describe("catalog migration round trip (apply then rollback all)", () => {
     const rolledBack = await rollbackAll(testDb.db, DRIZZLE_DIR);
 
     expect(rolledBack).toEqual([
+      "0006_sales_orders",
       "0005_wallet_ledger",
       "0004_rls_lockdown",
       "0003_sessions",

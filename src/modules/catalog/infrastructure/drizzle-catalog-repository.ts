@@ -141,9 +141,14 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     // close out the current row, then insert the new one. A crash between
     // the two leaves the (plan, tier) with zero current rows, never two — it
     // fails safely toward "not sellable", and plan_price_current_uniq still
-    // guarantees at most one current row exists at any point. Keeping it
-    // transaction-free also keeps it correct on Supabase's transaction
-    // pooler, where a session-scoped transaction is not available.
+    // guarantees at most one current row exists at any point.
+    //
+    // Note on the pooler, since an earlier version of this comment had it
+    // wrong: Supabase's transaction pooler DOES support multi-statement
+    // transactions — "transaction mode" means a backend is held for the
+    // duration of a transaction, not swapped per statement. Verified against
+    // port 6543. What it does not preserve is SESSION state across
+    // transactions. So this stays two statements by choice, not by force.
     await this.db
       .update(planPriceTable)
       .set({ effectiveTo: new Date() })
