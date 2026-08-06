@@ -98,6 +98,11 @@ describe("identity migration round trip (apply all, roll the identity stack back
     expect(await usersHasPasswordHash(testDb)).toBe(true);
 
     // Single-step rollbacks — the exact path `npm run db:rollback` uses.
+    // 0004 sits on top of the identity stack and must come off first; it
+    // touches no table structure, so the schema is unchanged after it.
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0004_rls_lockdown");
+    expect(await publicTableNames(testDb)).toContain("sessions");
+
     // The auth pair is TWO migrations, not one, precisely because each down
     // file must be a single statement: dropping the sessions table and
     // dropping the users column cannot share one.
