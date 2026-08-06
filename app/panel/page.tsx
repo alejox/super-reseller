@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { verifySession } from "@/modules/identity/application/dal";
 import { LogoutButton } from "../logout-button";
 import { PanelField, PanelGrid, PanelSkeleton } from "../session-panel";
+import { ResellerCatalog } from "./reseller-catalog";
 
 export const metadata: Metadata = {
   title: "Panel",
@@ -45,6 +46,10 @@ export default function PanelPage() {
 
       <Suspense fallback={<PanelSkeleton />}>
         <PanelSession />
+      </Suspense>
+
+      <Suspense fallback={<PanelSkeleton />}>
+        <ResellerCatalog />
       </Suspense>
     </main>
   );

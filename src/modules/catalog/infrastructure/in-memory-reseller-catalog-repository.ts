@@ -1,4 +1,8 @@
-import type { ResellerCatalogRepository, SellablePlan } from "../domain/catalog-repository";
+import type {
+  ResellerCatalogRepository,
+  SellablePlan,
+  SellablePlanListing,
+} from "../domain/catalog-repository";
 import type { PlanId, PriceTierId } from "../domain/ids";
 import { InMemoryCatalogRepository } from "./in-memory-catalog-repository";
 
@@ -15,8 +19,21 @@ export class InMemoryResellerCatalogRepository implements ResellerCatalogReposit
     private readonly priceTierId: PriceTierId,
   ) {}
 
-  async listSellablePlans(): Promise<readonly SellablePlan[]> {
-    return this.store.listSellablePlansForTier(this.priceTierId);
+  async listSellablePlans(): Promise<readonly SellablePlanListing[]> {
+    const [sellable, services] = await Promise.all([
+      this.store.listSellablePlansForTier(this.priceTierId),
+      this.store.listServices(),
+    ]);
+    // Mirrors the Drizzle adapter's INNER JOIN on `service`: every plan has a
+    // service by NOT NULL foreign key, so a missing one is a corrupt store,
+    // not a case to paper over with a default.
+    return sellable.map((entry) => {
+      const service = services.find((candidate) => candidate.id === entry.plan.serviceId);
+      if (!service) {
+        throw new Error(`Plan ${entry.plan.id} references unknown service ${entry.plan.serviceId}`);
+      }
+      return { ...entry, serviceName: service.name, serviceSlug: service.slug };
+    });
   }
 
   async findSellablePlan(planId: PlanId): Promise<SellablePlan | null> {

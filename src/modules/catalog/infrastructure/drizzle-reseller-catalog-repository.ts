@@ -1,11 +1,19 @@
 import { and, eq, isNull } from "drizzle-orm";
 import type { ModuleDb } from "@/shared/db/module-db";
 
-import type { ResellerCatalogRepository, SellablePlan } from "../domain/catalog-repository";
+import type {
+  ResellerCatalogRepository,
+  SellablePlan,
+  SellablePlanListing,
+} from "../domain/catalog-repository";
 import type { PlanId, PriceTierId } from "../domain/ids";
 import type { PlanKind } from "../domain/plan";
 import { planPriceAmount } from "../domain/plan-price";
-import { plan as planTable, planPrice as planPriceTable } from "./catalog.schema";
+import {
+  plan as planTable,
+  planPrice as planPriceTable,
+  service as serviceTable,
+} from "./catalog.schema";
 
 /**
  * Runs unmodified against both `NodePgDatabase` (production) and
@@ -39,7 +47,7 @@ export class DrizzleResellerCatalogRepository implements ResellerCatalogReposito
     private readonly priceTierId: PriceTierId,
   ) {}
 
-  async listSellablePlans(): Promise<readonly SellablePlan[]> {
+  async listSellablePlans(): Promise<readonly SellablePlanListing[]> {
     return this.sellableRows();
   }
 
@@ -48,10 +56,14 @@ export class DrizzleResellerCatalogRepository implements ResellerCatalogReposito
     return row ?? null;
   }
 
-  private async sellableRows(planId?: PlanId): Promise<SellablePlan[]> {
+  private async sellableRows(planId?: PlanId): Promise<SellablePlanListing[]> {
     const rows = await this.db
-      .select({ plan: planTable, price: planPriceTable })
+      .select({ plan: planTable, price: planPriceTable, service: serviceTable })
       .from(planTable)
+      // A second INNER JOIN, and it changes nothing about visibility: every
+      // plan has a service by `service_id NOT NULL REFERENCES service(id)`,
+      // so this cannot drop a row the tier predicate would have kept.
+      .innerJoin(serviceTable, eq(serviceTable.id, planTable.serviceId))
       .innerJoin(
         planPriceTable,
         and(
@@ -63,6 +75,10 @@ export class DrizzleResellerCatalogRepository implements ResellerCatalogReposito
       )
       .where(planId ? eq(planTable.id, planId) : undefined);
 
-    return rows.map((row) => toSellablePlan(row.plan, row.price));
+    return rows.map((row) => ({
+      ...toSellablePlan(row.plan, row.price),
+      serviceName: row.service.name,
+      serviceSlug: row.service.slug,
+    }));
   }
 }

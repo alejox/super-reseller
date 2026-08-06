@@ -49,11 +49,25 @@ export type SellablePlan = Readonly<{
 export type AdminCatalogRepository = CatalogRepository;
 
 /**
+ * A sellable plan carrying the service it belongs to.
+ *
+ * The listing needs it and `findSellablePlan` does not: plan names are only
+ * unique WITHIN a service ("1 Pantalla" exists under Netflix and under
+ * Disney+ alike), so a catalog listing without the service name asks the
+ * reseller to buy something it cannot identify.
+ */
+export type SellablePlanListing = SellablePlan &
+  Readonly<{
+    serviceName: string;
+    serviceSlug: string;
+  }>;
+
+/**
  * The RESELLER surface: sellable plans only, tier-free. No admin
  * capability (create/retire/set price) is reachable through this type.
  */
 export interface ResellerCatalogRepository {
-  listSellablePlans(): Promise<readonly SellablePlan[]>;
+  listSellablePlans(): Promise<readonly SellablePlanListing[]>;
   findSellablePlan(planId: PlanId): Promise<SellablePlan | null>;
 }
 
