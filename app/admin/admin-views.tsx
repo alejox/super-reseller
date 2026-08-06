@@ -39,21 +39,16 @@ export function AdminDashboardView() {
   );
 }
 
-export function AdminCatalogView() {
+/**
+ * The static half of the catalog screen. Kept free of session and database
+ * reads so it can prerender while the workspace streams in behind Suspense.
+ */
+export function AdminCatalogHeader() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8 sm:py-12">
-      <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Catálogo</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Gestión del catálogo</h1>
-        <p className="max-w-2xl text-zinc-600">Revise el espacio del catálogo antes de conectar los controles de gestión.</p>
-      </header>
-      <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="text-lg font-semibold text-zinc-950">Los controles del catálogo aún no están disponibles</h2>
-        <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-600">Los controles de creación y edición aún no están disponibles. Esta pantalla no simula datos del catálogo.</p>
-        <Link className="mt-6 inline-flex rounded-lg bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800" href="/admin">
-          Volver al panel
-        </Link>
-      </section>
-    </main>
+    <header className="space-y-2">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Catálogo</p>
+      <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Gestión del catálogo</h1>
+      <p className="max-w-2xl text-zinc-600">Defina los niveles de precio y los servicios antes de cargar los planes.</p>
+    </header>
   );
 }
