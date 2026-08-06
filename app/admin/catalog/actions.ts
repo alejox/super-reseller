@@ -2,8 +2,10 @@
 
 import { refresh } from "next/cache";
 
+import { createPlanAsAdmin } from "@/modules/catalog/application/admin/create-plan";
 import { createPriceTierAsAdmin } from "@/modules/catalog/application/admin/create-price-tier";
 import { createServiceAsAdmin } from "@/modules/catalog/application/admin/create-service";
+import { setPlanPriceAsAdmin } from "@/modules/catalog/application/admin/set-plan-price";
 import { adminCatalogRepository } from "./admin-catalog-repository";
 
 /**
@@ -80,6 +82,71 @@ export async function createServiceAction(
 
   if (!result.ok) {
     return { error: SERVICE_ERRORS[result.reason] };
+  }
+
+  refresh();
+  return undefined;
+}
+
+const PLAN_ERRORS = {
+  "service-unknown": "El servicio seleccionado ya no existe.",
+  "name-required": "Ingrese un nombre.",
+  "kind-invalid": "Seleccione un tipo de plan válido.",
+  "duration-invalid": "La duración debe ser un número entero de días mayor que cero.",
+  "tier-unknown": "El nivel de precio seleccionado ya no existe.",
+  "amount-invalid": "El precio debe ser un número entero de pesos, sin decimales ni signos.",
+  "duplicate-plan": "Ya existe un plan activo con ese tipo y esa duración para este servicio.",
+} as const;
+
+const PLAN_PRICE_ERRORS = {
+  "plan-unknown": "El plan seleccionado ya no existe.",
+  "tier-unknown": "El nivel de precio seleccionado ya no existe.",
+  "amount-invalid": "El precio debe ser un número entero de pesos, sin decimales ni signos.",
+} as const;
+
+export async function createPlanAction(
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  const catalog = await adminCatalogRepository();
+
+  const result = await createPlanAsAdmin(
+    { catalog },
+    {
+      serviceId: String(formData.get("serviceId") ?? ""),
+      name: String(formData.get("name") ?? ""),
+      kind: String(formData.get("kind") ?? ""),
+      durationDays: String(formData.get("durationDays") ?? ""),
+      priceTierId: String(formData.get("priceTierId") ?? ""),
+      amountMinor: String(formData.get("amountMinor") ?? ""),
+    },
+  );
+
+  if (!result.ok) {
+    return { error: PLAN_ERRORS[result.reason] };
+  }
+
+  refresh();
+  return undefined;
+}
+
+export async function setPlanPriceAction(
+  _state: CatalogFormState,
+  formData: FormData,
+): Promise<CatalogFormState> {
+  const catalog = await adminCatalogRepository();
+
+  const result = await setPlanPriceAsAdmin(
+    { catalog },
+    {
+      planId: String(formData.get("planId") ?? ""),
+      priceTierId: String(formData.get("priceTierId") ?? ""),
+      amountMinor: String(formData.get("amountMinor") ?? ""),
+    },
+  );
+
+  if (!result.ok) {
+    return { error: PLAN_PRICE_ERRORS[result.reason] };
   }
 
   refresh();

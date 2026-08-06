@@ -2,7 +2,13 @@
 
 import { useActionState, useEffect, useRef } from "react";
 
-import { createPriceTierAction, createServiceAction, type CatalogFormState } from "./actions";
+import {
+  createPlanAction,
+  createPriceTierAction,
+  createServiceAction,
+  setPlanPriceAction,
+  type CatalogFormState,
+} from "./actions";
 
 /**
  * The two creation forms. Client Components only because `useActionState`
@@ -121,6 +127,123 @@ export function CreateServiceForm() {
           type="text"
         />
       </label>
+      <FieldError state={state} />
+    </form>
+  );
+}
+
+export type TierOption = Readonly<{ id: string; code: string; name: string }>;
+
+/**
+ * Adds a plan to one service, with its price at one tier. Both halves are one
+ * form because they are one operation: a plan with no price is invisible to
+ * every reseller, so the screen never offers a way to create half of it.
+ */
+export function CreatePlanForm({
+  serviceId,
+  tiers,
+}: Readonly<{ serviceId: string; tiers: readonly TierOption[] }>) {
+  const [state, action, pending] = useActionState(createPlanAction, undefined);
+  const formRef = useResetOnSuccess(state, pending);
+
+  return (
+    <form action={action} className="mt-4 space-y-3 border-t border-zinc-200 pt-4" ref={formRef}>
+      <input name="serviceId" type="hidden" value={serviceId} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-600">Nombre</span>
+          <input autoComplete="off" className={FIELD_CLASS} name="name" placeholder="1 Pantalla" required type="text" />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-600">Tipo</span>
+          <select className={FIELD_CLASS} defaultValue="SCREEN" name="kind">
+            <option value="SCREEN">Pantalla</option>
+            <option value="FULL_ACCOUNT">Cuenta completa</option>
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-600">Duración (días)</span>
+          <input
+            className={FIELD_CLASS}
+            inputMode="numeric"
+            min="1"
+            name="durationDays"
+            placeholder="30"
+            required
+            step="1"
+            type="number"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-600">Nivel del precio inicial</span>
+          <select className={FIELD_CLASS} name="priceTierId" required>
+            {tiers.map((tier) => (
+              <option key={tier.id} value={tier.id}>
+                {tier.code} · {tier.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,12rem)_auto]">
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-zinc-600">Precio inicial (COP)</span>
+          <input
+            className={FIELD_CLASS}
+            inputMode="numeric"
+            min="0"
+            name="amountMinor"
+            placeholder="12000"
+            required
+            step="1"
+            type="number"
+          />
+        </label>
+        <button className={`${SUBMIT_CLASS} sm:mt-[1.375rem]`} disabled={pending} type="submit">
+          {pending ? "Creando…" : "Crear plan"}
+        </button>
+      </div>
+      <FieldError state={state} />
+    </form>
+  );
+}
+
+/**
+ * Sets one plan's price at one tier. Rendered per cell of the price matrix,
+ * so the same control both fills an empty tier and replaces an existing
+ * amount — one append-only write either way.
+ */
+export function SetPlanPriceForm({
+  planId,
+  tierId,
+  currentAmount,
+}: Readonly<{ planId: string; tierId: string; currentAmount: number | null }>) {
+  const [state, action, pending] = useActionState(setPlanPriceAction, undefined);
+
+  return (
+    <form action={action} className="flex flex-col gap-1">
+      <input name="planId" type="hidden" value={planId} />
+      <input name="priceTierId" type="hidden" value={tierId} />
+      <div className="flex items-center gap-1">
+        <input
+          aria-label="Precio"
+          className="w-28 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-950 focus:border-emerald-500 focus:outline-none"
+          defaultValue={currentAmount ?? ""}
+          inputMode="numeric"
+          min="0"
+          name="amountMinor"
+          placeholder="sin precio"
+          step="1"
+          type="number"
+        />
+        <button
+          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+          disabled={pending}
+          type="submit"
+        >
+          {pending ? "…" : "Guardar"}
+        </button>
+      </div>
       <FieldError state={state} />
     </form>
   );

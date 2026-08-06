@@ -9,6 +9,8 @@ import AdminPage from "./page";
 
 const listPriceTiers = vi.fn();
 const listServices = vi.fn();
+const listPlans = vi.fn();
+const listCurrentPlanPrices = vi.fn();
 
 vi.mock("@/modules/identity/application/dal", () => ({
   requireRole: vi.fn().mockResolvedValue({ role: "ADMIN" }),
@@ -22,7 +24,7 @@ vi.mock("@/modules/identity/application/actions", () => ({ logout: vi.fn() }));
 vi.mock("@/shared/db/client", () => ({ getDb: vi.fn() }));
 vi.mock("@/modules/identity/infrastructure/repository-factory", () => ({
   createDrizzleScopedCatalogRepositoryFactory: () => ({
-    for: () => ({ listPriceTiers, listServices }),
+    for: () => ({ listPriceTiers, listServices, listPlans, listCurrentPlanPrices }),
   }),
 }));
 
@@ -44,12 +46,33 @@ const service = (slug: string, name: string, description: string | null = null) 
   retiredAt: null,
 });
 
+const plan = (id: string, serviceSlug: string, name: string, durationDays = 30) => ({
+  id,
+  serviceId: `service-${serviceSlug}`,
+  name,
+  kind: "SCREEN" as const,
+  durationDays,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  retiredAt: null,
+});
 
+const price = (planId: string, tierCode: string, amountMinor: number) => ({
+  id: `price-${planId}-${tierCode}`,
+  planId,
+  priceTierId: `tier-${tierCode}`,
+  amountMinor,
+  currency: "COP",
+  effectiveFrom: new Date(),
+  effectiveTo: null,
+});
 
 /** Every suite starts from an empty catalog; each test fills in what it needs. */
 function emptyCatalog() {
   listPriceTiers.mockResolvedValue([]);
   listServices.mockResolvedValue([]);
+  listPlans.mockResolvedValue([]);
+  listCurrentPlanPrices.mockResolvedValue([]);
 }
 
 /**
@@ -63,8 +86,12 @@ async function renderWorkspace() {
   render(await CatalogWorkspace());
 }
 
-/** Scopes a query to one section, so a value repeated across two is unambiguous. */
-function section(name: "Niveles de precio" | "Servicios") {
+/**
+ * Scopes a query to one section. The three sections legitimately repeat text
+ * — a service slug labels both its own row and its plan group — so an
+ * unscoped `getByText` is ambiguous by design, not by accident.
+ */
+function section(name: "Niveles de precio" | "Servicios" | "Planes") {
   return within(screen.getByRole("region", { name }));
 }
 
@@ -168,5 +195,105 @@ describe("catalog workspace", () => {
     // would leave the operator unable to explain why that slug is refused.
     expect(screen.getByText("netflix")).toBeVisible();
     expect(screen.getByText("Retirado")).toBeVisible();
+  });
+});
+
+describe("catalog workspace: plans", () => {
+  /** A catalog with two tiers, one service and one plan priced at MAYOR only. */
+  function catalogWithOnePlan() {
+    listPriceTiers.mockResolvedValue([tier("MAYOR", "Mayorista"), tier("MINOR", "Minorista")]);
+    listServices.mockResolvedValue([service("netflix", "Netflix")]);
+    listPlans.mockResolvedValue([plan("plan-1", "netflix", "1 Pantalla")]);
+    listCurrentPlanPrices.mockResolvedValue([price("plan-1", "MAYOR", 12000)]);
+  }
+
+  it("renders a plan row with one column per tier", async () => {
+    catalogWithOnePlan();
+
+    await renderWorkspace();
+
+    expect(screen.getByRole("heading", { name: "Planes" })).toBeVisible();
+
+    // Assert on the ROW, not on loose text: "Pantalla" is also an option in
+    // the kind select, so a bare getByText would be ambiguous.
+    const row = section("Planes")
+      .getAllByRole("row")
+      .find((candidate) => candidate.textContent?.includes("1 Pantalla"));
+    expect(row).toBeDefined();
+    expect(row?.textContent).toContain("Pantalla");
+    expect(row?.textContent).toContain("30 días");
+
+    // One column per tier, plus Plan / Tipo / Duración.
+    expect(section("Planes").getAllByRole("columnheader")).toHaveLength(5);
+  });
+
+  it("formats a priced tier as money and names an unpriced tier as unsellable", async () => {
+    catalogWithOnePlan();
+
+    await renderWorkspace();
+
+    // COP has no fractional unit, so 12000 minor units IS $12.000 — the
+    // formatter divides by 10^0 here, not 10^2.
+    expect(screen.getByText(/\$\s?12\.000/)).toBeVisible();
+    // The whole point of the matrix: an empty cell must say why it matters.
+    expect(screen.getByText(/Sin precio — no se vende/)).toBeVisible();
+  });
+
+  it("pre-fills the price control of a priced tier and leaves the unpriced one blank", async () => {
+    catalogWithOnePlan();
+
+    await renderWorkspace();
+
+    const priceInputs = screen.getAllByRole("spinbutton", { name: "Precio" });
+    expect(priceInputs).toHaveLength(2);
+    expect(priceInputs[0]).toHaveValue(12000);
+    expect(priceInputs[1]).toHaveValue(null);
+  });
+
+  it("refuses to offer the plan form until a tier exists", async () => {
+    listServices.mockResolvedValue([service("netflix", "Netflix")]);
+
+    await renderWorkspace();
+
+    // `createPlanWithInitialPrice` demands a tier, so a plan form here could
+    // only ever produce a rejection the operator cannot act on.
+    expect(screen.getByText(/Cree un nivel de precio antes de cargar planes/i)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Crear plan" })).not.toBeInTheDocument();
+  });
+
+  it("refuses to offer the plan form until a service exists", async () => {
+    listPriceTiers.mockResolvedValue([tier("MAYOR", "Mayorista")]);
+
+    await renderWorkspace();
+
+    expect(screen.getByText(/Cree un servicio antes de cargar planes/i)).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Crear plan" })).not.toBeInTheDocument();
+  });
+
+  it("offers the plan form once both exist, even with no plans yet", async () => {
+    listPriceTiers.mockResolvedValue([tier("MAYOR", "Mayorista")]);
+    listServices.mockResolvedValue([service("netflix", "Netflix")]);
+
+    await renderWorkspace();
+
+    expect(screen.getByRole("button", { name: "Crear plan" })).toBeVisible();
+    expect(screen.getByText(/Este servicio todavía no tiene planes/i)).toBeVisible();
+  });
+
+  it("groups plans under their own service", async () => {
+    listPriceTiers.mockResolvedValue([tier("MAYOR", "Mayorista")]);
+    listServices.mockResolvedValue([service("netflix", "Netflix"), service("spotify", "Spotify")]);
+    listPlans.mockResolvedValue([
+      plan("plan-n", "netflix", "Netflix Pantalla"),
+      plan("plan-s", "spotify", "Spotify Familiar"),
+    ]);
+    listCurrentPlanPrices.mockResolvedValue([]);
+
+    await renderWorkspace();
+
+    // Two services means two plan forms, each bound to its own service id.
+    expect(screen.getAllByRole("button", { name: "Crear plan" })).toHaveLength(2);
+    expect(screen.getByText("Netflix Pantalla")).toBeVisible();
+    expect(screen.getByText("Spotify Familiar")).toBeVisible();
   });
 });
