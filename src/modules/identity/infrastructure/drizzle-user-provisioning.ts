@@ -1,6 +1,10 @@
 import type { ModuleDb } from "@/shared/db/module-db";
 
-import type { NewAdminUser, UserProvisioning } from "../domain/user-provisioning";
+import type {
+  NewAdminUser,
+  NewResellerUser,
+  UserProvisioning,
+} from "../domain/user-provisioning";
 import { users } from "./identity.schema";
 
 export class DrizzleUserProvisioning implements UserProvisioning {
@@ -16,6 +20,20 @@ export class DrizzleUserProvisioning implements UserProvisioning {
       // no reseller scope and carries no price tier.
       resellerId: null,
       priceTierId: null,
+      createdAt: user.createdAt,
+    });
+  }
+
+  async createReseller(user: NewResellerUser): Promise<void> {
+    await this.db.insert(users).values({
+      id: user.id,
+      email: user.email,
+      passwordHash: user.passwordHash,
+      role: "RESELLER",
+      // The mirror image of createAdmin: the same CHECK that forces both
+      // columns NULL for an ADMIN forces both NON-NULL here.
+      resellerId: user.resellerId,
+      priceTierId: user.priceTierId,
       createdAt: user.createdAt,
     });
   }

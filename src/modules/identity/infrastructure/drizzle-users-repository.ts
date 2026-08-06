@@ -14,6 +14,7 @@ function toScopedUserRow(row: typeof users.$inferSelect): ScopedUserRow {
     email: row.email,
     role: row.role,
     resellerId: row.resellerId,
+    priceTierId: row.priceTierId,
     deactivatedAt: row.deactivatedAt,
   });
 }

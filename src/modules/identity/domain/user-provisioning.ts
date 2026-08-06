@@ -1,4 +1,4 @@
-import type { UserId } from "./ids";
+import type { PriceTierId, ResellerId, UserId } from "./ids";
 
 export type NewAdminUser = Readonly<{
   id: UserId;
@@ -10,13 +10,37 @@ export type NewAdminUser = Readonly<{
 }>;
 
 /**
+ * A reseller account. Unlike an admin it carries two extra ids, and neither
+ * is optional:
+ *
+ * - `resellerId` is the ownership axis `tenantWhere` filters on (IT:
+ *   Single-Level Reseller Ownership). A top-level reseller owns its own
+ *   tenant, so the row carries the id it was issued — without it the
+ *   reseller cannot read its own row back.
+ * - `priceTierId` decides every price this account will ever see.
+ *   `users_reseller_requires_tier` makes a tier-less RESELLER
+ *   unrepresentable, so the type matches the constraint: not nullable.
+ */
+export type NewResellerUser = Readonly<{
+  id: UserId;
+  email: string;
+  passwordHash: string;
+  resellerId: ResellerId;
+  priceTierId: PriceTierId;
+  createdAt: Date;
+}>;
+
+/**
  * Account creation. Separate from `ScopedUsersRepository` because it runs
  * before any session exists — this is the bootstrap path that creates the
  * FIRST admin, when there is nobody to authorize it.
  *
- * ADMIN only, deliberately: creating resellers requires a price tier and
- * belongs to the admin panel, behind a real session.
+ * `createReseller` runs the other way round: behind a real ADMIN session,
+ * from the admin panel. It lives on the same port because both write the
+ * same table under the same CHECK, and keeping them together is what makes
+ * the asymmetry in that CHECK visible in one place.
  */
 export interface UserProvisioning {
   createAdmin(user: NewAdminUser): Promise<void>;
+  createReseller(user: NewResellerUser): Promise<void>;
 }

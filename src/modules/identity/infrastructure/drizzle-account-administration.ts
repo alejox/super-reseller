@@ -18,6 +18,7 @@ type DeactivationRow = {
   email: string;
   role: string;
   reseller_id: string | null;
+  price_tier_id: string | null;
   deactivated_at: string | Date;
   revoked_sessions: number;
 } & Record<string, unknown>;
@@ -62,13 +63,13 @@ export class DrizzleAccountAdministration implements AccountAdministration {
       WITH deactivated AS (
         UPDATE users SET deactivated_at = ${now.toISOString()}
         WHERE id = ${userId} AND ${tenantPredicate}
-        RETURNING id, email, role, reseller_id, deactivated_at
+        RETURNING id, email, role, reseller_id, price_tier_id, deactivated_at
       ), revoked AS (
         UPDATE sessions SET revoked_at = ${now.toISOString()}
         WHERE user_id IN (SELECT id FROM deactivated) AND revoked_at IS NULL
         RETURNING id
       )
-      SELECT d.id, d.email, d.role, d.reseller_id, d.deactivated_at,
+      SELECT d.id, d.email, d.role, d.reseller_id, d.price_tier_id, d.deactivated_at,
              (SELECT count(*) FROM revoked)::int AS revoked_sessions
       FROM deactivated d
     `);
@@ -85,6 +86,7 @@ export class DrizzleAccountAdministration implements AccountAdministration {
         email: row.email,
         role: row.role,
         resellerId: row.reseller_id,
+        priceTierId: row.price_tier_id,
         deactivatedAt: new Date(row.deactivated_at),
       }),
       revokedSessions: Number(row.revoked_sessions),

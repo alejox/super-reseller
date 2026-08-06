@@ -1,4 +1,4 @@
-import type { ResellerId, UserId } from "./ids";
+import type { PriceTierId, ResellerId, UserId } from "./ids";
 import type { UserRole } from "./user-role";
 
 /**
@@ -15,6 +15,13 @@ export type ScopedUserRow = Readonly<{
   email: string;
   role: UserRole;
   resellerId: ResellerId | null;
+  /**
+   * NULL for an ADMIN, never for a RESELLER — `users_reseller_requires_tier`
+   * enforces exactly that asymmetry. Exposed because the tier decides every
+   * price the account will ever see, so an admin listing that omitted it
+   * would show accounts without showing what distinguishes them.
+   */
+  priceTierId: PriceTierId | null;
   deactivatedAt: Date | null;
 }>;
 

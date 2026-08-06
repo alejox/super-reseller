@@ -35,18 +35,19 @@ const DRIZZLE_DIR = path.join(
 );
 
 // ── Seed data: two resellers owning two rows each, plus one platform row ──
+const TIER_ID = "99999999-9999-4999-8999-999999999999";
 const RESELLER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const RESELLER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const RESELLER_C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 const ROWS_A: readonly ScopedUserRow[] = [
-  { id: "11111111-1111-4111-8111-111111111111", email: "a-account-1@example.com", role: "RESELLER", resellerId: RESELLER_A, deactivatedAt: null },
-  { id: "22222222-2222-4222-8222-222222222222", email: "a-account-2@example.com", role: "RESELLER", resellerId: RESELLER_A, deactivatedAt: null },
+  { id: "11111111-1111-4111-8111-111111111111", email: "a-account-1@example.com", role: "RESELLER", resellerId: RESELLER_A, priceTierId: TIER_ID, deactivatedAt: null },
+  { id: "22222222-2222-4222-8222-222222222222", email: "a-account-2@example.com", role: "RESELLER", resellerId: RESELLER_A, priceTierId: TIER_ID, deactivatedAt: null },
 ];
 
 const ROWS_B: readonly ScopedUserRow[] = [
-  { id: "33333333-3333-4333-8333-333333333333", email: "b-account-1@example.com", role: "RESELLER", resellerId: RESELLER_B, deactivatedAt: null },
-  { id: "44444444-4444-4444-8444-444444444444", email: "b-account-2@example.com", role: "RESELLER", resellerId: RESELLER_B, deactivatedAt: null },
+  { id: "33333333-3333-4333-8333-333333333333", email: "b-account-1@example.com", role: "RESELLER", resellerId: RESELLER_B, priceTierId: TIER_ID, deactivatedAt: null },
+  { id: "44444444-4444-4444-8444-444444444444", email: "b-account-2@example.com", role: "RESELLER", resellerId: RESELLER_B, priceTierId: TIER_ID, deactivatedAt: null },
 ];
 
 const ROW_PLATFORM: ScopedUserRow = {
@@ -54,6 +55,7 @@ const ROW_PLATFORM: ScopedUserRow = {
   email: "platform@example.com",
   role: "ADMIN",
   resellerId: null,
+  priceTierId: null,
   deactivatedAt: null,
 };
 
@@ -95,7 +97,6 @@ function pgliteAdapter(): Adapter {
       // CHECK accepts a RESELLER row only with an assigned tier; the ADMIN
       // platform row must carry none. The fake leg above models the use case
       // only, so only this SQL leg needs the real invariant.
-      const TIER_ID = "99999999-9999-4999-8999-999999999999";
       await testDb.db.execute(
         sql`INSERT INTO price_tier (id, code, name, created_at) VALUES (${TIER_ID}, 'SEED', 'Seed tier', now())`,
       );
