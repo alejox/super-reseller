@@ -79,9 +79,25 @@ export interface CatalogRepository {
   findPlanById(planId: PlanId): Promise<Plan | null>;
   listPlansByService(serviceId: ServiceId): Promise<readonly Plan[]>;
 
+  /**
+   * Every plan in the catalog, retired ones included — the ADMIN screen's
+   * bulk read. Exists alongside `listPlansByService` so rendering a
+   * plan × tier matrix costs two queries instead of one per service plus one
+   * per cell.
+   */
+  listPlans(): Promise<readonly Plan[]>;
+
   /** Append-only: closes out the current row for (planId, tierId), then inserts a new one. */
   setPlanPrice(input: SetPlanPriceInput): Promise<PlanPrice>;
   listPlanPriceHistory(planId: PlanId, tierId: PriceTierId): Promise<readonly PlanPrice[]>;
+
+  /**
+   * The current price row for every (plan, tier) pair that has one —
+   * `effective_to IS NULL` only. Superseded rows stay in the table and are
+   * reachable through `listPlanPriceHistory`; letting one leak in here would
+   * put a stale amount on screen.
+   */
+  listCurrentPlanPrices(): Promise<readonly PlanPrice[]>;
 
   /**
    * CAT: Missing Tier Price Blocks Sale. Returns `null` — never a price

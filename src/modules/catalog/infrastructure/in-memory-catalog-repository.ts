@@ -140,6 +140,16 @@ export class InMemoryCatalogRepository implements CatalogRepository {
     return this.prices.filter((price) => price.planId === planId && price.priceTierId === tierId);
   }
 
+  async listPlans(): Promise<readonly Plan[]> {
+    return [...this.plans.values()];
+  }
+
+  async listCurrentPlanPrices(): Promise<readonly PlanPrice[]> {
+    // Mirrors the Drizzle adapter's `WHERE effective_to IS NULL`, which the
+    // `plan_price_current_uniq` index limits to one row per (plan, tier).
+    return this.prices.filter((price) => price.effectiveTo === null);
+  }
+
   async findSellablePlan(planId: PlanId, tierId: PriceTierId): Promise<SellablePlan | null> {
     const plan = this.plans.get(planId);
     if (!plan) return null;

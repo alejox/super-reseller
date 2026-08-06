@@ -208,4 +208,56 @@ describe.each([inMemoryAdapter(), pgliteAdapter()])("CatalogRepository contract:
     expect((await repo.findPlanById(original.id))?.retiredAt).not.toBeNull();
     expect(replacement.id).not.toBe(original.id);
   });
+
+  // The admin catalog screen renders a plan × tier price matrix. Reading it
+  // through `listPlansByService` + `findSellablePlan` would cost one query
+  // per service plus one per (plan, tier) cell; these two methods make it two
+  // queries regardless of catalog size.
+  it("lists every plan across all services, retired ones included", async () => {
+    const netflix = await repo.createService({ slug: "netflix", name: "Netflix" });
+    const spotify = await repo.createService({ slug: "spotify", name: "Spotify" });
+    const kept = await repo.createPlan({ serviceId: netflix.id, name: "Netflix 30", kind: "SCREEN", durationDays: 30 });
+    const other = await repo.createPlan({ serviceId: spotify.id, name: "Spotify 30", kind: "FULL_ACCOUNT", durationDays: 30 });
+    const gone = await repo.createPlan({ serviceId: netflix.id, name: "Netflix 60", kind: "SCREEN", durationDays: 60 });
+    await repo.retirePlan(gone.id);
+
+    const plans = await repo.listPlans();
+
+    // Retired plans stay visible to the ADMIN: they still hold price history
+    // and, per CAT: Service Retirement Preserves Plans, remain sellable.
+    expect(plans.map((plan) => plan.id).sort()).toEqual([kept.id, other.id, gone.id].sort());
+    expect(plans.find((plan) => plan.id === gone.id)?.retiredAt).not.toBeNull();
+  });
+
+  it("lists only the CURRENT price row for every (plan, tier) pair", async () => {
+    const service = await repo.createService({ slug: "netflix", name: "Netflix" });
+    const tierA = await repo.createPriceTier({ code: "TIER_A", name: "Tier A" });
+    const tierB = await repo.createPriceTier({ code: "TIER_B", name: "Tier B" });
+    const plan = await repo.createPlanWithInitialPrice({
+      serviceId: service.id,
+      name: "Netflix 30",
+      kind: "SCREEN",
+      durationDays: 30,
+      priceTierId: tierA.id,
+      amountMinor: 100_000,
+      currency: "COP",
+    });
+    await repo.setPlanPrice({ planId: plan.id, priceTierId: tierA.id, amountMinor: 120_000, currency: "COP" });
+    await repo.setPlanPrice({ planId: plan.id, priceTierId: tierB.id, amountMinor: 150_000, currency: "COP" });
+
+    const current = await repo.listCurrentPlanPrices();
+
+    // `plan_price` is append-only, so tier A now has TWO rows and only the
+    // newer one is current. A superseded price leaking into this list would
+    // put a stale amount on the screen.
+    expect(current).toHaveLength(2);
+    expect(current.every((price) => price.effectiveTo === null)).toBe(true);
+    expect(current.find((price) => price.priceTierId === tierA.id)?.amountMinor).toBe(120_000);
+    expect(current.find((price) => price.priceTierId === tierB.id)?.amountMinor).toBe(150_000);
+  });
+
+  it("returns no current prices for a fresh catalog", async () => {
+    expect(await repo.listCurrentPlanPrices()).toEqual([]);
+    expect(await repo.listPlans()).toEqual([]);
+  });
 });

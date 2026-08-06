@@ -168,6 +168,21 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     return rows.map(toPlanPrice);
   }
 
+  async listPlans(): Promise<readonly Plan[]> {
+    return (await this.db.select().from(planTable)).map(toPlan);
+  }
+
+  async listCurrentPlanPrices(): Promise<readonly PlanPrice[]> {
+    // `effective_to IS NULL` is exactly the predicate behind
+    // `plan_price_current_uniq`, so this returns at most one row per
+    // (plan, tier) — enforced by the index, not by hoping.
+    const rows = await this.db
+      .select()
+      .from(planPriceTable)
+      .where(isNull(planPriceTable.effectiveTo));
+    return rows.map(toPlanPrice);
+  }
+
   async findSellablePlan(planId: PlanId, tierId: PriceTierId): Promise<SellablePlan | null> {
     // Inner join, exact tier only — a missing current row for this tier
     // yields no row at all, so a fallback to another tier's price is not
