@@ -1,12 +1,13 @@
 import type {
   CatalogRepository,
+  CreatePlanWithInitialPriceInput,
   NewPriceTierInput,
   PriceTier,
   SellablePlan,
   SetPlanPriceInput,
 } from "../domain/catalog-repository";
 import type { PlanId, PriceTierId, ServiceId } from "../domain/ids";
-import { DuplicatePlanIdentityError, type NewPlanInput, type Plan, createPlan } from "../domain/plan";
+import { DuplicatePlanIdentityError, type NewPlanInput, type Plan, createPlan, retirePlan } from "../domain/plan";
 import {
   closeOutPrice,
   createPlanPrice,
@@ -37,6 +38,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
     return tier;
   }
 
+  async listPriceTiers(): Promise<readonly PriceTier[]> {
+    return [...this.priceTiers.values()];
+  }
+
   async createService(input: NewServiceInput): Promise<Service> {
     const service = createService(input);
     this.services.set(service.id, service);
@@ -51,6 +56,10 @@ export class InMemoryCatalogRepository implements CatalogRepository {
 
   async findServiceById(serviceId: ServiceId): Promise<Service | null> {
     return this.services.get(serviceId) ?? null;
+  }
+
+  async listServices(): Promise<readonly Service[]> {
+    return [...this.services.values()];
   }
 
   async createPlan(input: NewPlanInput): Promise<Plan> {
@@ -70,6 +79,34 @@ export class InMemoryCatalogRepository implements CatalogRepository {
     const plan = createPlan(input);
     this.plans.set(plan.id, plan);
     return plan;
+  }
+
+  async createPlanWithInitialPrice(input: CreatePlanWithInitialPriceInput): Promise<Plan> {
+    if (!this.priceTiers.has(input.priceTierId)) {
+      throw new Error(`Price tier ${input.priceTierId} does not exist.`);
+    }
+    const plan = createPlan(input);
+    const initialPrice = createPlanPrice({ planId: plan.id, priceTierId: input.priceTierId, amountMinor: input.amountMinor, currency: input.currency });
+    const duplicate = [...this.plans.values()].find(
+      (existing) =>
+        existing.serviceId === input.serviceId &&
+        existing.kind === input.kind &&
+        existing.durationDays === input.durationDays &&
+        existing.retiredAt === null,
+    );
+    if (duplicate) {
+      throw new DuplicatePlanIdentityError(input.serviceId, input.kind, input.durationDays);
+    }
+
+    this.plans.set(plan.id, plan);
+    this.prices.push(initialPrice);
+    return plan;
+  }
+
+  async retirePlan(planId: PlanId): Promise<void> {
+    const plan = this.plans.get(planId);
+    if (!plan) return;
+    this.plans.set(planId, retirePlan(plan));
   }
 
   async findPlanById(planId: PlanId): Promise<Plan | null> {

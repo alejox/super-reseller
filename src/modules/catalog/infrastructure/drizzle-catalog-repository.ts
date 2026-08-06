@@ -1,9 +1,9 @@
-import { and, eq, isNull } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
+import { and, eq, isNull, sql } from "drizzle-orm";
+import type { ModuleDb } from "@/shared/db/module-db";
 
 import type {
   CatalogRepository,
+  CreatePlanWithInitialPriceInput,
   NewPriceTierInput,
   PriceTier,
   SellablePlan,
@@ -28,7 +28,7 @@ import {
  * the `RollbackableDb` pattern already used in shared/db/migrator.ts for
  * the same reason without tripping `@typescript-eslint/no-explicit-any`.
  */
-type CatalogDb = NeonHttpDatabase | PgliteDatabase;
+type CatalogDb = ModuleDb;
 
 function toService(row: typeof serviceTable.$inferSelect): Service {
   return Object.freeze({ ...row });
@@ -57,6 +57,10 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     return tier;
   }
 
+  async listPriceTiers(): Promise<readonly PriceTier[]> {
+    return (await this.db.select().from(priceTierTable)).map((row) => Object.freeze({ ...row }));
+  }
+
   async createService(input: NewServiceInput): Promise<Service> {
     const service = createService(input);
     await this.db.insert(serviceTable).values(service);
@@ -76,6 +80,10 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     return row ? toService(row) : null;
   }
 
+  async listServices(): Promise<readonly Service[]> {
+    return (await this.db.select().from(serviceTable)).map(toService);
+  }
+
   async createPlan(input: NewPlanInput): Promise<Plan> {
     const plan = createPlan(input);
     // plan_identity_uniq (partial unique index) rejects a duplicate active
@@ -83,6 +91,36 @@ export class DrizzleCatalogRepository implements CatalogRepository {
     // single source of truth for this invariant.
     await this.db.insert(planTable).values(plan);
     return plan;
+  }
+
+  async createPlanWithInitialPrice(input: CreatePlanWithInitialPriceInput): Promise<Plan> {
+    const plan = createPlan(input);
+    const initialPrice = createPlanPrice({
+      planId: plan.id,
+      priceTierId: input.priceTierId,
+      amountMinor: input.amountMinor,
+      currency: input.currency,
+    });
+
+    await this.db.execute(sql`
+      WITH inserted_plan AS (
+        INSERT INTO plan (id, service_id, name, kind, duration_days, created_at, updated_at, retired_at)
+        VALUES (${plan.id}, ${plan.serviceId}, ${plan.name}, ${plan.kind}, ${plan.durationDays}, ${plan.createdAt}, ${plan.updatedAt}, ${plan.retiredAt})
+        RETURNING id
+      )
+      INSERT INTO plan_price (id, plan_id, price_tier_id, amount_minor, currency, effective_from, effective_to)
+      SELECT ${initialPrice.id}, id, ${initialPrice.priceTierId}, ${initialPrice.amountMinor}, ${initialPrice.currency}, ${initialPrice.effectiveFrom}, ${initialPrice.effectiveTo}
+      FROM inserted_plan
+    `);
+    return plan;
+  }
+
+  async retirePlan(planId: PlanId): Promise<void> {
+    const now = new Date();
+    await this.db
+      .update(planTable)
+      .set({ retiredAt: now, updatedAt: now })
+      .where(eq(planTable.id, planId));
   }
 
   async findPlanById(planId: PlanId): Promise<Plan | null> {

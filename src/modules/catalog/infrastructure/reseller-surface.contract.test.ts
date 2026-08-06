@@ -10,13 +10,12 @@ import {
   type AccessScope,
 } from "../../identity/domain/access-scope";
 import {
+  createDrizzleScopedCatalogRepositoryFactory,
   ScopedRepositoryFactory,
   type CatalogRepositoryFactory,
 } from "../../identity/infrastructure/repository-factory";
 import type { AdminCatalogRepository } from "../domain/catalog-repository";
 import type { PlanId } from "../domain/ids";
-import { DrizzleCatalogRepository } from "./drizzle-catalog-repository";
-import { DrizzleResellerCatalogRepository } from "./drizzle-reseller-catalog-repository";
 import { InMemoryCatalogRepository } from "./in-memory-catalog-repository";
 import { InMemoryResellerCatalogRepository } from "./in-memory-reseller-catalog-repository";
 
@@ -109,10 +108,12 @@ function pgliteAdapter(): Adapter {
     async setup() {
       testDb = await createTestDb();
       await migrate(testDb.db, { migrationsFolder: DRIZZLE_DIR });
-      const admin = new DrizzleCatalogRepository(testDb.db);
-      const factory = new ScopedRepositoryFactory(
-        admin,
-        (scope) => new DrizzleResellerCatalogRepository(testDb!.db, scope.priceTierId),
+      const factory = createDrizzleScopedCatalogRepositoryFactory(testDb.db);
+      const admin = factory.for(
+        mintAdminScope("00000000-0000-4000-8000-000000000000") as Extract<
+          AccessScope,
+          { kind: "admin" }
+        >,
       );
       return { admin, factory };
     },

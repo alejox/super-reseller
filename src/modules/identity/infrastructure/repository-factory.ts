@@ -1,8 +1,11 @@
 import type { AccessScope } from "../domain/access-scope";
+import type { ModuleDb } from "@/shared/db/module-db";
 import type {
   AdminCatalogRepository,
   ResellerCatalogRepository,
 } from "@/modules/catalog/domain/catalog-repository";
+import { DrizzleCatalogRepository } from "@/modules/catalog/infrastructure/drizzle-catalog-repository";
+import { DrizzleResellerCatalogRepository } from "@/modules/catalog/infrastructure/drizzle-reseller-catalog-repository";
 
 /**
  * The repository gate (design.md: "multi-tenant isolation is enforced by
@@ -61,4 +64,13 @@ export class ScopedRepositoryFactory implements CatalogRepositoryFactory {
     // `AdminCatalogRepository` in both type and runtime.
     return this.adminRepository as RepoFor<S>;
   }
+}
+
+export function createDrizzleScopedCatalogRepositoryFactory(
+  db: ModuleDb,
+): ScopedRepositoryFactory {
+  return new ScopedRepositoryFactory(
+    new DrizzleCatalogRepository(db),
+    (scope) => new DrizzleResellerCatalogRepository(db, scope.priceTierId),
+  );
 }

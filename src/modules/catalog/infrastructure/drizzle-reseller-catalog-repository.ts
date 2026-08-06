@@ -1,6 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import type { NeonHttpDatabase } from "drizzle-orm/neon-http";
-import type { PgliteDatabase } from "drizzle-orm/pglite";
+import type { ModuleDb } from "@/shared/db/module-db";
 
 import type { ResellerCatalogRepository, SellablePlan } from "../domain/catalog-repository";
 import type { PlanId, PriceTierId } from "../domain/ids";
@@ -12,7 +11,7 @@ import { plan as planTable, planPrice as planPriceTable } from "./catalog.schema
  * Runs unmodified against both `NeonHttpDatabase` (production) and
  * `PgliteDatabase` (tests) — same pattern as `DrizzleCatalogRepository`.
  */
-type CatalogDb = NeonHttpDatabase | PgliteDatabase;
+type CatalogDb = ModuleDb;
 
 function toSellablePlan(
   plan: typeof planTable.$inferSelect,

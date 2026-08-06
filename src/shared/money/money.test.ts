@@ -127,6 +127,16 @@ describe("isZero() / isNegative()", () => {
 
 describe("formatMoney()", () => {
   // RED (task 3a.5) / GREEN (task 3a.6)
+  it("uses each currency's practical Intl fraction digits without rescaling the stored amount", () => {
+    const cop = formatMoney(money(150_000, "COP"), "es-CO");
+    const usd = formatMoney(money(150_000, "USD"), "en-US");
+
+    expect(cop.replace(/\D/g, "")).toBe("150000");
+    expect(usd.replace(/\D/g, "")).toBe("150000");
+    expect(cop).toMatch(/150[.\u00a0 ]?000/);
+    expect(usd).toMatch(/1[,.]500\.00/);
+  });
+
   it("formats a Money value as localized currency text", () => {
     const formatted = formatMoney(money(150000, "COP"), "es-CO");
 

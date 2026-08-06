@@ -173,4 +173,39 @@ describe.each([inMemoryAdapter(), pgliteAdapter()])("CatalogRepository contract:
       }),
     ).rejects.toThrow();
   });
+
+  it("lists administrative rows including retired services, and lists every price tier", async () => {
+    const active = await repo.createService({ slug: "paramount-plus", name: "Paramount+" });
+    const retired = await repo.createService({ slug: "apple-tv", name: "Apple TV+" });
+    const firstTier = await repo.createPriceTier({ code: "TIER_LIST_A", name: "List A" });
+    const secondTier = await repo.createPriceTier({ code: "TIER_LIST_B", name: "List B" });
+    await repo.retireService(retired.id);
+    const services = await repo.listServices();
+    const tiers = await repo.listPriceTiers();
+    expect(services.map((service) => service.id)).toEqual(expect.arrayContaining([active.id, retired.id]));
+    expect(services.find((service) => service.id === retired.id)?.retiredAt).not.toBeNull();
+    expect(tiers.map((tier) => tier.id)).toEqual(expect.arrayContaining([firstTier.id, secondTier.id]));
+  });
+
+  it("creates a plan with its first price atomically and keeps exactly one current row", async () => {
+    const service = await repo.createService({ slug: "crunchyroll", name: "Crunchyroll" });
+    const tier = await repo.createPriceTier({ code: "TIER_INITIAL", name: "Initial" });
+
+    const plan = await repo.createPlanWithInitialPrice({ serviceId: service.id, name: "Crunchyroll Pantalla 30 días", kind: "SCREEN", durationDays: 30, priceTierId: tier.id, amountMinor: 150_000, currency: "COP" });
+    const history = await repo.listPlanPriceHistory(plan.id, tier.id);
+    expect(history).toHaveLength(1);
+    expect(history[0]).toMatchObject({ amountMinor: 150_000, currency: "COP", effectiveTo: null });
+    await repo.setPlanPrice({ planId: plan.id, priceTierId: tier.id, amountMinor: 160_000, currency: "COP" });
+    const replacedHistory = await repo.listPlanPriceHistory(plan.id, tier.id);
+    expect(replacedHistory.filter((price) => price.effectiveTo === null)).toHaveLength(1);
+  });
+
+  it("soft-retires a plan and frees its active identity without deleting the retired row", async () => {
+    const service = await repo.createService({ slug: "mubi", name: "MUBI" });
+    const original = await repo.createPlan({ serviceId: service.id, name: "MUBI Pantalla 30 días", kind: "SCREEN", durationDays: 30 });
+    await repo.retirePlan(original.id);
+    const replacement = await repo.createPlan({ serviceId: service.id, name: "MUBI Pantalla nueva 30 días", kind: "SCREEN", durationDays: 30 });
+    expect((await repo.findPlanById(original.id))?.retiredAt).not.toBeNull();
+    expect(replacement.id).not.toBe(original.id);
+  });
 });

@@ -118,3 +118,17 @@ Chain strategy: pending
 - [x] 5b.8 GREEN: `proxy.ts` — cookie presence + `jwtVerify` signature + role-claim route table only, no DB access; code comment documents the accepted property that a validly-signed but revoked-session cookie passes proxy and is rejected by the DAL microseconds later
 - [x] 5b.9 GREEN: login/logout Server Actions wire hashing, session signing, cookie set/clear
 - [x] 5b.10 Verify: `npx tsc --noEmit` and `npm run lint` pass across the full change
+
+## Phase 6: Scope Deviation — UI Shell and Admin Seed (undocumented at plan time)
+
+**Not part of the original slice mapping.** `design.md` line 3 states "Nothing user-visible ships"; commits `2f5a9ab` and `7f57949` ship user-visible pages and an operational seed script anyway (`verify-report.md` WARNING 4). Recorded here, after the fact, as an explicit scope deviation — `design.md`'s original intent is left as written, not retroactively rewritten to claim this was always planned.
+
+- [x] 6.1 `provision-admin` use case + `UserProvisioning` port + Drizzle adapter — the seed script's actual write path (`src/modules/identity/application/admin/provision-admin.ts` + `.test.ts`, PGlite; `src/modules/identity/domain/user-provisioning.ts`; `src/modules/identity/infrastructure/drizzle-user-provisioning.ts`)
+- [x] 6.2 `scripts/db/seed-admin.ts` — one-shot admin bootstrap script (`npm run db:seed-admin`)
+- [x] 6.3 `/login` page + `login-form.tsx` — client form wired to the `login` Server Action (`app/login/page.tsx`, `app/login/login-form.tsx`)
+- [x] 6.4 `/admin` and `/panel` role home shells (`app/admin/page.tsx`, `app/panel/page.tsx`)
+- [x] 6.5 `app/page.tsx` root redirect (signed-out → `/login`, signed-in → role home), reusing `decideRouteAccess`
+- [x] 6.6 Signed-in chrome wired to the `logout` Server Action (`app/session-panel.tsx`, `app/logout-button.tsx`)
+- [x] 6.7 `app/layout.tsx` font fix + `app/globals.css` touch-up (unrelated to auth; bundled into the same commit as 6.3–6.6)
+
+**Known gap, not closed by this phase**: none of the nine files above have automated coverage (`verify-report.md` WARNING 5) — `@testing-library/react`, `jsdom`, and `jest-dom` were installed in Phase 1 (task 1.2) but no `*.test.tsx` file exists anywhere in the repo. Left as a tracked follow-up, not fixed here.

@@ -50,16 +50,17 @@ function assertValidCurrency(currency: unknown): asserts currency is CurrencyCod
 function assertValidAmount(amountMinor: unknown): asserts amountMinor is number {
   if (typeof amountMinor !== "number" || !Number.isSafeInteger(amountMinor)) {
     throw new InvalidMoneyError(
-      `Money amount must be a safe integer number of minor units, got ${JSON.stringify(amountMinor)}.`,
+      `Money amount must be a safe integer in the currency's smallest practical unit, got ${JSON.stringify(amountMinor)}.`,
     );
   }
 }
 
 /**
  * Constructs a frozen `Money` value. Throws `InvalidMoneyError` unless
- * `amountMinor` is a safe integer and `currency` is a 3-letter ISO 4217
- * code — no floating point and no implicit currency ever reach the rest of
- * the codebase.
+ * `amountMinor` is a safe integer in the currency's smallest practical
+ * unit (for example, pesos for COP and cents for USD) and `currency` is a
+ * 3-letter ISO 4217 code — no floating point and no implicit currency ever
+ * reach the rest of the codebase.
  */
 export function money(amountMinor: number, currency: CurrencyCode): Money {
   assertValidAmount(amountMinor);
@@ -130,8 +131,10 @@ export function isNegative(m: Money): boolean {
 
 /**
  * Formats a `Money` value as localized currency text via
- * `Intl.NumberFormat`. Presentation only — isomorphic, and never mutates
- * or replaces the underlying `Money` value.
+ * `Intl.NumberFormat`. The stored integer is divided only by the formatter's
+ * practical fraction digits (COP: 0, USD: 2); callers never pre-scale it.
+ * Presentation only — isomorphic, and never mutates or replaces the
+ * underlying `Money` value.
  */
 export function formatMoney(m: Money, locale: string): string {
   const formatter = new Intl.NumberFormat(locale, {

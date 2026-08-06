@@ -84,7 +84,7 @@ formatMoney(m, locale)                 // Intl.NumberFormat, presentation only, 
 
 - **Rounding rules: none, deliberately.** Rounding only arises from division or percentages, and the proposal settled on *absolute* per-tier prices with no margin resolution. No `divide` is exposed. If ordering later needs proportional splits, add `allocate()` (largest-remainder, sum-preserving) rather than `round()`.
 - **Currency mismatch throws.** With a single currency in production, a mismatch is a programmer error, not user input — a `Result` type would invite silent swallowing.
-- **`number`, not `bigint`.** Safe-integer range covers ~90 000 000 000 COP in centavos; `bigint` serializes poorly across the RSC boundary and through Drizzle. Guarded by `Number.isSafeInteger` at construction.
+- **`number`, not `bigint`.** Safe-integer range covers ~90 000 000 000 COP in pesos (its practical 0-digit unit); `bigint` serializes poorly across the RSC boundary and through Drizzle. Guarded by `Number.isSafeInteger` at construction.
 - DB column is `bigint(mode: 'number')`; confirm the Neon HTTP driver returns it as a JS number and not a string in slice 2.
 
 ### Decision: identifiers are generated in the application, not by a DB default

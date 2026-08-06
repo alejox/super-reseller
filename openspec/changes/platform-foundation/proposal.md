@@ -91,7 +91,7 @@ Four modules, one per business capability the product actually has — the layou
 | Hierarchy | Role + `reseller_id` on owned rows. **No `parent_id`, no recursion, no acyclic constraint.** | One level (ADMIN → RESELLER) makes graph machinery pure cost | Arbitrary-depth sub-reseller tree |
 | Tier pricing | `price_tier` entity; each reseller assigned one tier; `plan_price(plan_id, tier_id, amount_minor, currency)` | Absolute rows, no margin resolution logic to get wrong | Percentage/margin off a retail price |
 | Session | `jose`-signed cookie carrying a session id + DB session row | A deactivated reseller must lose access immediately; a stateless JWT cannot be revoked | Stateless JWT |
-| Money | Integer minor units (centavos) + currency code | Uniform and safe for any future second currency | Whole-peso integers |
+| Money | Integer smallest practical units (pesos for COP, cents for USD) + currency code | Uniform and safe for any future second currency | Whole-peso integers |
 | Payment gateway | **Port-only in this change — no adapter, no provider commitment.** Wompi recorded as the intended first adapter for the later wallet change. | Keeps the decision out of the foundation | — |
 
 **Authorization posture.** `proxy.ts` performs an optimistic cookie check only. Real authorization lives in the DAL and is re-checked inside every Server Action — Server Actions are public endpoints.

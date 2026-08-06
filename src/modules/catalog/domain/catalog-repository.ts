@@ -15,6 +15,14 @@ export type SetPlanPriceInput = Readonly<{
   currency: NewPlanPriceInput["currency"];
 }>;
 
+/** A plan and its mandatory first price, persisted as one repository operation. */
+export type CreatePlanWithInitialPriceInput = NewPlanInput &
+  Readonly<{
+    priceTierId: PriceTierId;
+    amountMinor: number;
+    currency: NewPlanPriceInput["currency"];
+  }>;
+
 /**
  * A plan resolved as sellable at one specific tier. `planPriceId` is the
  * order-time anchor (design.md: "plan_price is append-only and individually
@@ -58,12 +66,16 @@ export interface ResellerCatalogRepository {
  */
 export interface CatalogRepository {
   createPriceTier(input: NewPriceTierInput): Promise<PriceTier>;
+  listPriceTiers(): Promise<readonly PriceTier[]>;
 
   createService(input: NewServiceInput): Promise<Service>;
   retireService(serviceId: ServiceId): Promise<void>;
   findServiceById(serviceId: ServiceId): Promise<Service | null>;
+  listServices(): Promise<readonly Service[]>;
 
   createPlan(input: NewPlanInput): Promise<Plan>;
+  createPlanWithInitialPrice(input: CreatePlanWithInitialPriceInput): Promise<Plan>;
+  retirePlan(planId: PlanId): Promise<void>;
   findPlanById(planId: PlanId): Promise<Plan | null>;
   listPlansByService(serviceId: ServiceId): Promise<readonly Plan[]>;
 

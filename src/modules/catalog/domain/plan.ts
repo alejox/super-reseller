@@ -77,3 +77,8 @@ export function createPlan(input: NewPlanInput): Plan {
 export function planDurationDays(plan: Plan): number {
   return plan.durationDays;
 }
+
+/** Soft-retires a plan while retaining it for history and foreign-key references. */
+export function retirePlan(plan: Plan, retiredAt: Date = new Date()): Plan {
+  return Object.freeze({ ...plan, retiredAt, updatedAt: retiredAt });
+}
