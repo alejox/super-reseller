@@ -2,6 +2,8 @@ import type { SellablePlanListing } from "@/modules/catalog/domain/catalog-repos
 import { getScope, verifySession } from "@/modules/identity/application/dal";
 import { createDrizzleScopedCatalogRepositoryFactory } from "@/modules/identity/infrastructure/repository-factory";
 import { formatMoney } from "@/shared/money/money";
+
+import { BuyButton } from "./buy-button";
 import { getDb } from "@/shared/db/client";
 
 /**
@@ -94,6 +96,9 @@ export async function ResellerCatalog() {
                   <th className={TH_CLASS} scope="col">Tipo</th>
                   <th className={TH_CLASS} scope="col">Duración</th>
                   <th className={TH_CLASS} scope="col">Precio</th>
+                  <th className={TH_CLASS} scope="col">
+                    <span className="sr-only">Comprar</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -109,6 +114,9 @@ export async function ResellerCatalog() {
                     <td className={TD_CLASS}>{entry.plan.durationDays} días</td>
                     <td className={`${TD_CLASS} font-semibold`}>
                       {formatMoney(entry.price, "es-CO")}
+                    </td>
+                    <td className={TD_CLASS}>
+                      <BuyButton planId={entry.plan.id} />
                     </td>
                   </tr>
                 ))}

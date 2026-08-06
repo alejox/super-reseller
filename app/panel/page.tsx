@@ -5,6 +5,7 @@ import { verifySession } from "@/modules/identity/application/dal";
 import { LogoutButton } from "../logout-button";
 import { PanelField, PanelGrid, PanelSkeleton } from "../session-panel";
 import { ResellerCatalog } from "./reseller-catalog";
+import { ResellerOrders } from "./reseller-orders";
 import { ResellerWallet } from "./reseller-wallet";
 
 export const metadata: Metadata = {
@@ -55,6 +56,10 @@ export default function PanelPage() {
 
       <Suspense fallback={<PanelSkeleton />}>
         <ResellerCatalog />
+      </Suspense>
+
+      <Suspense fallback={<PanelSkeleton />}>
+        <ResellerOrders />
       </Suspense>
     </main>
   );

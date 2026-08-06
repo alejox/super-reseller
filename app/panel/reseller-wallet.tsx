@@ -16,6 +16,7 @@ import { getDb } from "@/shared/db/client";
 const KIND_LABELS: Readonly<Record<string, string>> = {
   TOPUP: "Recarga",
   ADJUSTMENT: "Ajuste",
+  ORDER_DEBIT: "Compra",
 };
 
 const TH_CLASS = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500";
