@@ -8,6 +8,7 @@ import type {
   SessionsRepository,
   VerifiableSession,
 } from "../domain/sessions-repository";
+import { isUserRole } from "../domain/user-role";
 import { sessions, users } from "./identity.schema";
 
 
@@ -54,7 +55,14 @@ export class DrizzleSessionsRepository implements SessionsRepository {
       .where(eq(sessions.id, sessionId))
       .limit(1);
 
-    return row ? Object.freeze({ ...row }) : null;
+    if (!row) return null;
+    // `role` is text + CHECK, not a Postgres enum (design.md "Decision:
+    // role becomes text + CHECK"); narrow it through the same guard every
+    // other read of `users.role` uses.
+    if (!isUserRole(row.role)) {
+      throw new Error(`Unexpected role "${row.role}" for session ${row.sessionId}`);
+    }
+    return Object.freeze({ ...row, role: row.role });
   }
 
   async revoke(sessionId: SessionId, revokedAt: Date = new Date()): Promise<void> {

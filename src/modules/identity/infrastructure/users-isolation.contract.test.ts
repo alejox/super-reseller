@@ -5,20 +5,28 @@ import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/pglite/migrator";
 
 import { createTestDb, closeTestDb, type TestDb } from "../../../../tests/support/pglite-db";
-import { mintAdminScope, mintResellerScope, type AccessScope } from "../domain/access-scope";
+import {
+  mintAdminScope,
+  mintCustomerScope,
+  mintResellerScope,
+  type AccessScope,
+} from "../domain/access-scope";
 import type { ScopedUserRow, ScopedUsersRepository } from "../domain/scoped-users-repository";
 import { DrizzleScopedUsersRepository } from "./drizzle-users-repository";
 import { InMemoryScopedUsersRepository } from "./in-memory-users-repository";
 
 /**
- * IT: Reseller Row Isolation — one shared contract suite run twice
- * (design.md "Testing Strategy"): the in-memory fake proves the USE CASE
- * is scoped, PGlite proves the SQL is. Same assertions, both backends.
+ * IT: Tenant Row Isolation (generalized from "Reseller Row Isolation" —
+ * design.md's third `AccessScope` variant means the tenant axis now spans
+ * both RESELLER and CUSTOMER rows) — one shared contract suite run twice
+ * (design.md "Testing Strategy"): the in-memory fake proves the USE CASE is
+ * scoped, PGlite proves the SQL is. Same assertions, both backends.
  *
- * The reseller-owned table is `users` (the ONLY table carrying
- * `reseller_id` — catalog tables are tier-scoped, not reseller-scoped;
- * design.md "Schema" + shared/db/tenant.ts). A row is owned by reseller X
- * when its `reseller_id` is X.
+ * The tenant-owned table is `users` (the ONLY table carrying `reseller_id`
+ * — catalog tables are tier-scoped, not tenant-scoped; design.md "Schema" +
+ * shared/db/tenant.ts). A row is owned by tenant X when its `reseller_id`
+ * is X — true for a RESELLER's OWN tenant id and a CUSTOMER's OWN tenant id
+ * alike (IT: Single-Level Tenant Ownership).
  *
  * Task 4.8 RED: the scoped adapters do not exist yet, so this suite is
  * expected to fail at import resolution. The PGlite leg applies the real
@@ -34,11 +42,14 @@ const DRIZZLE_DIR = path.join(
   "drizzle",
 );
 
-// ── Seed data: two resellers owning two rows each, plus one platform row ──
+// ── Seed data: two resellers and two customers, each owning two rows,
+// ── plus one platform row ──────────────────────────────────────────────
 const TIER_ID = "99999999-9999-4999-8999-999999999999";
 const RESELLER_A = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const RESELLER_B = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const RESELLER_C = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const CUSTOMER_D = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const CUSTOMER_E = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
 
 const ROWS_A: readonly ScopedUserRow[] = [
   { id: "11111111-1111-4111-8111-111111111111", email: "a-account-1@example.com", role: "RESELLER", resellerId: RESELLER_A, priceTierId: TIER_ID, deactivatedAt: null },
@@ -50,6 +61,16 @@ const ROWS_B: readonly ScopedUserRow[] = [
   { id: "44444444-4444-4444-8444-444444444444", email: "b-account-2@example.com", role: "RESELLER", resellerId: RESELLER_B, priceTierId: TIER_ID, deactivatedAt: null },
 ];
 
+const ROWS_D: readonly ScopedUserRow[] = [
+  { id: "d1111111-1111-4111-8111-111111111111", email: "d-account-1@example.com", role: "CUSTOMER", resellerId: CUSTOMER_D, priceTierId: TIER_ID, deactivatedAt: null },
+  { id: "d2222222-2222-4222-8222-222222222222", email: "d-account-2@example.com", role: "CUSTOMER", resellerId: CUSTOMER_D, priceTierId: TIER_ID, deactivatedAt: null },
+];
+
+const ROWS_E: readonly ScopedUserRow[] = [
+  { id: "e1111111-1111-4111-8111-111111111111", email: "e-account-1@example.com", role: "CUSTOMER", resellerId: CUSTOMER_E, priceTierId: TIER_ID, deactivatedAt: null },
+  { id: "e2222222-2222-4222-8222-222222222222", email: "e-account-2@example.com", role: "CUSTOMER", resellerId: CUSTOMER_E, priceTierId: TIER_ID, deactivatedAt: null },
+];
+
 const ROW_PLATFORM: ScopedUserRow = {
   id: "55555555-5555-4555-8555-555555555555",
   email: "platform@example.com",
@@ -59,9 +80,17 @@ const ROW_PLATFORM: ScopedUserRow = {
   deactivatedAt: null,
 };
 
+const ALL_SEED_ROWS: readonly ScopedUserRow[] = [
+  ...ROWS_A,
+  ...ROWS_B,
+  ...ROWS_D,
+  ...ROWS_E,
+  ROW_PLATFORM,
+];
+
 interface Adapter {
   name: string;
-  /** Seeds the same four reseller-owned rows + one platform row. */
+  /** Seeds the same eight tenant-owned rows (resellers + customers) + one platform row. */
   seed(): Promise<void>;
   /** A repository bound to `scope` over the seeded store. */
   repoFor(scope: AccessScope): Promise<ScopedUsersRepository>;
@@ -73,7 +102,7 @@ function inMemoryAdapter(): Adapter {
   return {
     name: "in-memory fake",
     async seed() {
-      rows = [...ROWS_A, ...ROWS_B, ROW_PLATFORM];
+      rows = ALL_SEED_ROWS;
     },
     async repoFor(scope) {
       return new InMemoryScopedUsersRepository(rows, scope);
@@ -91,20 +120,22 @@ function pgliteAdapter(): Adapter {
     async seed() {
       testDb = await createTestDb();
       // Real migrations, real order: drizzle/0000 (catalog: price_tier is
-      // the FK target) then drizzle/0001 (identity: users).
+      // the FK target) then drizzle/0001 (identity: users) through 0007
+      // (role becomes text + CHECK, CUSTOMER added).
       await migrate(testDb.db, { migrationsFolder: DRIZZLE_DIR });
-      // IT: One Price Tier Per Reseller — the users_reseller_requires_tier
-      // CHECK accepts a RESELLER row only with an assigned tier; the ADMIN
-      // platform row must carry none. The fake leg above models the use case
-      // only, so only this SQL leg needs the real invariant.
+      // IT: Tier Requirement Matches Role — the users_tier_matches_role
+      // CHECK accepts a RESELLER or CUSTOMER row only with an assigned
+      // tier; the ADMIN platform row must carry none. The fake leg above
+      // models the use case only, so only this SQL leg needs the real
+      // invariant.
       await testDb.db.execute(
         sql`INSERT INTO price_tier (id, code, name, created_at) VALUES (${TIER_ID}, 'SEED', 'Seed tier', now())`,
       );
-      for (const row of [...ROWS_A, ...ROWS_B, ROW_PLATFORM]) {
+      for (const row of ALL_SEED_ROWS) {
         // `password_hash` is NOT NULL (drizzle/0002); a stand-in PHC string
         // keeps this suite about isolation, which is what it proves.
         await testDb.db.execute(
-          sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${row.id}, ${row.email}, '$argon2id$stand-in', ${row.role}, ${row.resellerId}, ${row.role === "RESELLER" ? TIER_ID : null}, now())`,
+          sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${row.id}, ${row.email}, '$argon2id$stand-in', ${row.role}, ${row.resellerId}, ${row.role === "RESELLER" || row.role === "CUSTOMER" ? TIER_ID : null}, now())`,
         );
       }
     },
@@ -120,7 +151,7 @@ function pgliteAdapter(): Adapter {
   };
 }
 
-describe.each([inMemoryAdapter(), pgliteAdapter()])("ScopedUsersRepository row isolation (IT: Reseller Row Isolation): $name", (adapter) => {
+describe.each([inMemoryAdapter(), pgliteAdapter()])("ScopedUsersRepository row isolation (IT: Tenant Row Isolation): $name", (adapter) => {
   beforeEach(async () => {
     await adapter.seed();
   });
@@ -156,15 +187,53 @@ describe.each([inMemoryAdapter(), pgliteAdapter()])("ScopedUsersRepository row i
     ]);
   });
 
-  it("returns rows from EVERY reseller for an ADMIN scope", async () => {
+  it("returns rows from EVERY tenant — reseller and customer alike — for an ADMIN scope", async () => {
     const repo = await adapter.repoFor(mintAdminScope("00000000-0000-4000-8000-000000000000"));
 
     const rows = await repo.listUsers();
 
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(9);
     expect(new Set(rows.map((row) => row.resellerId))).toEqual(
-      new Set([RESELLER_A, RESELLER_B, null]),
+      new Set([RESELLER_A, RESELLER_B, CUSTOMER_D, CUSTOMER_E, null]),
     );
+  });
+
+  // CI: Customer Row Isolation / IT: Tenant Row Isolation — "Customer
+  // cannot read another customer's rows".
+  it("returns exactly the rows owned by the customer for a CUSTOMER scope (customer D)", async () => {
+    const repo = await adapter.repoFor(mintCustomerScope(CUSTOMER_D, CUSTOMER_D, "tier-d"));
+
+    const rows = await repo.listUsers();
+
+    expect(rows.map((row) => row.email).sort()).toEqual([
+      "d-account-1@example.com",
+      "d-account-2@example.com",
+    ]);
+    expect(rows.every((row) => row.resellerId === CUSTOMER_D)).toBe(true);
+  });
+
+  it("returns NONE of customer D's rows for customer E's scope", async () => {
+    const repo = await adapter.repoFor(mintCustomerScope(CUSTOMER_E, CUSTOMER_E, "tier-e"));
+
+    const rows = await repo.listUsers();
+
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.resellerId === CUSTOMER_E)).toBe(true);
+    expect(rows.map((row) => row.email).sort()).toEqual([
+      "e-account-1@example.com",
+      "e-account-2@example.com",
+    ]);
+  });
+
+  // IT: Reseller and customer scopes never cross.
+  it("returns NONE of any customer's rows for a reseller scope, and none of any reseller's rows for a customer scope", async () => {
+    const resellerRepo = await adapter.repoFor(mintResellerScope(RESELLER_A, RESELLER_A, "tier-a"));
+    const resellerRows = await resellerRepo.listUsers();
+    expect(resellerRows.some((row) => row.role === "CUSTOMER")).toBe(false);
+
+    const customerRepo = await adapter.repoFor(mintCustomerScope(CUSTOMER_D, CUSTOMER_D, "tier-d"));
+    const customerRows = await customerRepo.listUsers();
+    expect(customerRows.some((row) => row.role === "RESELLER")).toBe(false);
   });
 
   it("returns an empty set for a reseller that owns no rows (isolation is real filtering, not coincidence)", async () => {
@@ -208,7 +277,7 @@ describe.each([inMemoryAdapter(), pgliteAdapter()])(
 
       // Soft delete: the row is still selectable — nothing was removed.
       const rows = await repo.listUsers();
-      expect(rows).toHaveLength(5);
+      expect(rows).toHaveLength(9);
       const deactivated = rows.find((row) => row.id === "11111111-1111-4111-8111-111111111111");
       expect(deactivated).toBeDefined();
       expect(deactivated!.deactivatedAt).not.toBeNull();
@@ -238,7 +307,7 @@ describe.each([inMemoryAdapter(), pgliteAdapter()])(
 
       expect(updated).toBeNull();
       const rows = await repo.listUsers();
-      expect(rows).toHaveLength(5);
+      expect(rows).toHaveLength(9);
       expect(rows.every((row) => row.deactivatedAt === null)).toBe(true);
     });
 

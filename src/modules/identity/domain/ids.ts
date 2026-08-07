@@ -10,3 +10,11 @@ export type ResellerId = string;
 export type PriceTierId = string;
 /** `sessions.id` — the value carried inside the session cookie. */
 export type SessionId = string;
+/**
+ * The tenancy axis, generalized beyond `ResellerId` (design.md "Decision:
+ * `role` becomes `text` + CHECK" + "Single-Level Tenant Ownership"). A
+ * `RESELLER`'s tenant id and a `CUSTOMER`'s tenant id are both `TenantId` —
+ * a freestanding id minted the same way, never derived from or nested under
+ * another user's id. `tenantIdOf(scope)` is the one function that reads it.
+ */
+export type TenantId = string;

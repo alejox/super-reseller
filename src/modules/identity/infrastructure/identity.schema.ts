@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, pgEnum, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { priceTier } from "../../catalog/infrastructure/catalog.schema";
 
@@ -19,13 +19,14 @@ import { priceTier } from "../../catalog/infrastructure/catalog.schema";
  * type.
  */
 
-// IT: Exactly One Role Per User — role is a closed set, so the rejection is
-// a Postgres enum (design.md "Decision: role is a Postgres enum; plan.kind
-// is text + CHECK"). `users_role_check` is redundant while the column stays
-// an enum (the cast rejects 'SUPERADMIN' before the CHECK can run); it is
-// kept as defense in depth and to honor the task contract.
-export const userRole = pgEnum("user_role", ["ADMIN", "RESELLER"]);
-
+// IT: Exactly One Role Per User — role is text + CHECK, not a Postgres enum
+// (design.md "Decision: role becomes text + CHECK; the user_role enum is
+// dropped" — drizzle-orm/pg-core/dialect.js wraps every pending migration
+// file in ONE transaction, so `ALTER TYPE ... ADD VALUE` followed by a
+// statement that names the new value in the SAME transaction is rejected by
+// Postgres; widening by ALTER COLUMN TYPE text avoids that landmine
+// entirely and matches this project's own precedent for anything the
+// product can widen, e.g. `plan.kind`, `sales_order.status`).
 export const users = pgTable(
   "users",
   {
@@ -35,7 +36,7 @@ export const users = pgTable(
     // no passwordless path in this change, so a credential-less user row is
     // not a state the application should be able to represent.
     passwordHash: text("password_hash").notNull(),
-    role: userRole("role").notNull(),
+    role: text("role").notNull(),
     resellerId: uuid("reseller_id"),
     // IT: Price Tier Deletion Guard — ON DELETE RESTRICT, enforced by the
     // database, not app code (design.md "Schema-level answers").
@@ -53,16 +54,16 @@ export const users = pgTable(
     // Non-partial, per design.md DDL: `UNIQUE INDEX users_email_lower_uniq
     // ON (lower(email))` (no WHERE clause).
     uniqueIndex("users_email_lower_uniq").on(sql`lower(${table.email})`),
-    check("users_role_check", sql`${table.role} IN ('ADMIN', 'RESELLER')`),
-    // IT: One Price Tier Per Reseller — the activation guard. There is no
-    // `is_active` boolean (deactivated_at only), so "activating" a reseller
-    // is the insert/update of an active row; this CHECK is what makes a
-    // tier-less RESELLER unrepresentable. Symmetric per design.md DDL: an
-    // ADMIN must carry no tier either. Enforced by the database, not app
-    // code (design.md "Schema-level answers").
+    check("users_role_check", sql`${table.role} IN ('ADMIN', 'RESELLER', 'CUSTOMER')`),
+    // IT: Tier Requirement Matches Role — the activation guard. There is no
+    // `is_active` boolean (deactivated_at only), so "activating" a RESELLER
+    // or CUSTOMER is the insert/update of an active row; this CHECK is what
+    // makes a tier-less RESELLER or CUSTOMER unrepresentable. Symmetric per
+    // design.md DDL: an ADMIN must carry no tier either. Enforced by the
+    // database, not app code (design.md "Schema-level answers").
     check(
-      "users_reseller_requires_tier",
-      sql`(${table.role} = 'RESELLER' AND ${table.priceTierId} IS NOT NULL) OR (${table.role} = 'ADMIN' AND ${table.priceTierId} IS NULL)`,
+      "users_tier_matches_role",
+      sql`(${table.role} IN ('RESELLER', 'CUSTOMER') AND ${table.priceTierId} IS NOT NULL) OR (${table.role} = 'ADMIN' AND ${table.priceTierId} IS NULL)`,
     ),
   ],
 );

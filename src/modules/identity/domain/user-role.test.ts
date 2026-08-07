@@ -9,4 +9,12 @@ describe('isUserRole', () => {
   it('accepts ADMIN', () => {
     expect(isUserRole('ADMIN')).toBe(true)
   })
+
+  it('accepts RESELLER', () => {
+    expect(isUserRole('RESELLER')).toBe(true)
+  })
+
+  it('accepts CUSTOMER', () => {
+    expect(isUserRole('CUSTOMER')).toBe(true)
+  })
 })

@@ -97,6 +97,7 @@ describe("catalog migration round trip (apply then rollback all)", () => {
     const rolledBack = await rollbackAll(testDb.db, DRIZZLE_DIR);
 
     expect(rolledBack).toEqual([
+      "0007_customer_role",
       "0006_sales_orders",
       "0005_wallet_ledger",
       "0004_rls_lockdown",

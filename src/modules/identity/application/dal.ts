@@ -7,14 +7,18 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/shared/db/client";
 import {
   mintAdminScope,
+  mintCustomerScope,
   mintResellerScope,
   type AccessScope,
 } from "@/modules/identity/domain/access-scope";
+import type { UserId } from "@/modules/identity/domain/ids";
 import type { UserRole } from "@/modules/identity/domain/user-role";
+import { DrizzleScopedUsersRepository } from "@/modules/identity/infrastructure/drizzle-users-repository";
 import { DrizzleSessionsRepository } from "@/modules/identity/infrastructure/drizzle-sessions-repository";
 import { assertRole } from "./authorization";
 import { LOGIN_PATH } from "./auth/route-access";
 import { sessionSecretKey } from "./auth/session-token";
+import { resolveActingCustomerScopeInput, scopeInputFromSession, type ScopeInput } from "./scope-resolution";
 import { verifySessionFromToken, type VerifiedSession } from "./session-verifier";
 
 /**
@@ -66,27 +70,38 @@ export const verifySession = cache(async (): Promise<VerifiedSession> => {
 });
 
 /**
+ * Mints the concrete `AccessScope` for a decided `ScopeInput` — the ONLY
+ * place any of the three mint functions is called. Kept a plain function
+ * (not `cache()`d itself): both call sites below wrap it in their own
+ * per-request cache.
+ */
+function mintScope(input: ScopeInput): AccessScope {
+  switch (input.kind) {
+    case "admin":
+      return mintAdminScope(input.userId);
+    case "reseller":
+      return mintResellerScope(input.userId, input.resellerId, input.priceTierId);
+    case "customer":
+      return mintCustomerScope(
+        input.userId,
+        input.tenantId,
+        input.priceTierId,
+        input.actingAdminUserId,
+      );
+  }
+}
+
+/**
  * Mints the `AccessScope` for the current request — the single production
  * bridge between "who is asking" and "what SQL may run". The scope is built
  * from the DB row, never from the cookie, so a tampered or stale cookie
- * cannot widen it.
+ * cannot widen it. The branching decision itself lives in
+ * `scopeInputFromSession` (application/scope-resolution.ts), unit-tested
+ * independently of this `"server-only"` file.
  */
 export const getScope = cache(async (): Promise<AccessScope> => {
   const session = await verifySession();
-
-  if (session.role === "ADMIN") {
-    return mintAdminScope(session.userId);
-  }
-
-  // The schema's `users_reseller_requires_tier` CHECK makes a tier-less
-  // RESELLER unrepresentable, so this can only fire if the row was written
-  // around the constraint. Failing loudly beats minting a scope with a
-  // missing tier, which would silently widen a reseller's catalog.
-  if (session.resellerId === null || session.priceTierId === null) {
-    throw new Error(`RESELLER ${session.userId} has no reseller id or price tier`);
-  }
-
-  return mintResellerScope(session.userId, session.resellerId, session.priceTierId);
+  return mintScope(scopeInputFromSession(session));
 });
 
 /**
@@ -97,4 +112,21 @@ export const getScope = cache(async (): Promise<AccessScope> => {
  */
 export const requireRole = cache(async (role: UserRole): Promise<VerifiedSession> => {
   return assertRole(await verifySession(), role);
+});
+
+/**
+ * design.md "Decision: ADMIN-acting-as-customer is a scope downgrade, not a
+ * wider admin scope". The only other scope minter besides `getScope`: it
+ * re-verifies the session row is `ADMIN`, loads the target from the DB,
+ * and mints a scope for the TARGET's tenant — narrower than an admin
+ * scope, not wider. `resolveActingCustomerScopeInput` (scope-resolution.ts)
+ * owns the validation (real target, `role === "CUSTOMER"`,
+ * `deactivated_at IS NULL`) and is unit-tested independently of this file.
+ */
+export const actAsCustomer = cache(async (targetUserId: UserId): Promise<AccessScope> => {
+  const session = await requireRole("ADMIN");
+  const admin = mintAdminScope(session.userId);
+  const targets = await new DrizzleScopedUsersRepository(getDb(), admin).listUsers();
+  const target = targets.find((user) => user.id === targetUserId) ?? null;
+  return mintScope(resolveActingCustomerScopeInput(session.userId, target));
 });

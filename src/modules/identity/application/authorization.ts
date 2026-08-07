@@ -1,3 +1,5 @@
+import { tenantIdOf, type AccessScope } from "@/modules/identity/domain/access-scope";
+import type { TenantId } from "@/modules/identity/domain/ids";
 import type { UserRole } from "@/modules/identity/domain/user-role";
 import type { VerifiedSession } from "./session-verifier";
 
@@ -46,4 +48,31 @@ export function assertRole(session: VerifiedSession, role: UserRole): VerifiedSe
     throw new ForbiddenError();
   }
   return session;
+}
+
+/**
+ * AUTH: Actor-Subject Distinction For ADMIN-On-Behalf Operations. Two
+ * identities, evaluated separately: the ACTOR (`scope`, who is asking) and
+ * the SUBJECT (`targetTenantId`, whose data/tenant the operation targets).
+ * Never authorized merely because the actor is authenticated, nor merely
+ * because actor and subject happen to match by coincidence — the rule is
+ * spelled out per role:
+ *
+ * - ADMIN actor: authorized for ANY subject.
+ * - CUSTOMER actor: authorized only when its own tenant id equals the
+ *   subject (acting for itself).
+ * - RESELLER actor: never authorized, regardless of subject — a reseller
+ *   has no on-behalf-of capability over customer data.
+ *
+ * The single generic helper slices 2 (provider-accounts) and 3 (purchase
+ * seam) reuse for their own ADMIN-on-behalf-of-customer operations.
+ */
+export function assertActorAuthorizedForSubject(scope: AccessScope, targetTenantId: TenantId): void {
+  if (scope.kind === "admin") {
+    return;
+  }
+  if (scope.kind === "customer" && tenantIdOf(scope) === targetTenantId) {
+    return;
+  }
+  throw new ForbiddenError();
 }

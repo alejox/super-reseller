@@ -12,6 +12,9 @@ export function AdminNavigation() {
       <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/resellers">
         Revendedores
       </Link>
+      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/customers">
+        Clientes
+      </Link>
       <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/orders">
         Órdenes
       </Link>
@@ -39,6 +42,11 @@ export function AdminDashboardView() {
             <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Revendedores</span>
             <p className="mt-2 text-sm leading-6 text-zinc-600">Cuentas y su nivel de precio</p>
             <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir revendedores →</span>
+          </Link>
+          <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/customers">
+            <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Clientes</span>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">Cuentas y su nivel de precio</p>
+            <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir clientes →</span>
           </Link>
           <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/orders">
             <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Órdenes</span>

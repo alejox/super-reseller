@@ -5,10 +5,17 @@ import { tenantWhere } from "@/shared/db/tenant";
 import type { AccessScope } from "../domain/access-scope";
 import type { UserId } from "../domain/ids";
 import type { ScopedUserRow, ScopedUsersRepository } from "../domain/scoped-users-repository";
+import { isUserRole } from "../domain/user-role";
 import { users } from "./identity.schema";
 
 
 function toScopedUserRow(row: typeof users.$inferSelect): ScopedUserRow {
+  // `role` is text + CHECK, not a Postgres enum (design.md "Decision: role
+  // becomes text + CHECK"); narrow it through the same guard every other
+  // read of `users.role` uses.
+  if (!isUserRole(row.role)) {
+    throw new Error(`Unexpected role "${row.role}" in users row ${row.id}`);
+  }
   return Object.freeze({
     id: row.id,
     email: row.email,

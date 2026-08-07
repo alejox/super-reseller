@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 
-import { ForbiddenError, UnauthenticatedError, assertRole, requireSession } from "./authorization";
+import {
+  mintAdminScope,
+  mintCustomerScope,
+  mintResellerScope,
+} from "@/modules/identity/domain/access-scope";
+import {
+  ForbiddenError,
+  UnauthenticatedError,
+  assertActorAuthorizedForSubject,
+  assertRole,
+  requireSession,
+} from "./authorization";
 import type { VerifiedSession } from "./session-verifier";
 
 const ADMIN: VerifiedSession = {
@@ -37,6 +48,41 @@ describe("assertRole (AUTH: Role-Aware Authorization)", () => {
     // An authorization error is shown to the caller; naming the missing
     // role or the user id turns a denial into a probe.
     expect(() => assertRole(RESELLER, "ADMIN")).toThrow(/^Forbidden$/);
+  });
+});
+
+/**
+ * AUTH: Actor-Subject Distinction For ADMIN-On-Behalf Operations. Two
+ * identities, evaluated separately — the acting session's role (actor) and
+ * the tenant id the operation targets (subject) — never conflated.
+ */
+describe("assertActorAuthorizedForSubject", () => {
+  it("authorizes an ADMIN actor for any customer subject", () => {
+    const admin = mintAdminScope("admin-1");
+    expect(() => assertActorAuthorizedForSubject(admin, "customer-tenant-1")).not.toThrow();
+    expect(() => assertActorAuthorizedForSubject(admin, "customer-tenant-2")).not.toThrow();
+  });
+
+  it("authorizes a customer actor only for its own tenant as subject", () => {
+    const customer = mintCustomerScope("customer-user-1", "customer-tenant-1", "tier-1");
+    expect(() => assertActorAuthorizedForSubject(customer, "customer-tenant-1")).not.toThrow();
+  });
+
+  it("denies a customer actor naming a DIFFERENT tenant as subject", () => {
+    const customer = mintCustomerScope("customer-user-1", "customer-tenant-1", "tier-1");
+    expect(() => assertActorAuthorizedForSubject(customer, "customer-tenant-2")).toThrow(
+      ForbiddenError,
+    );
+  });
+
+  it("denies a reseller actor regardless of subject", () => {
+    const reseller = mintResellerScope("reseller-user-1", "reseller-tenant-1", "tier-1");
+    expect(() => assertActorAuthorizedForSubject(reseller, "reseller-tenant-1")).toThrow(
+      ForbiddenError,
+    );
+    expect(() => assertActorAuthorizedForSubject(reseller, "customer-tenant-1")).toThrow(
+      ForbiddenError,
+    );
   });
 });
 

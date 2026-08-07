@@ -61,7 +61,7 @@ const noMintersOutsideDal = {
   paths: [
     {
       name: "@/modules/identity/domain/access-scope",
-      importNames: ["mintAdminScope", "mintResellerScope"],
+      importNames: ["mintAdminScope", "mintResellerScope", "mintCustomerScope"],
       message:
         "AccessScope minters may only be imported by src/modules/identity/application/dal.ts — the DAL mints scopes from a DB-verified session row.",
     },

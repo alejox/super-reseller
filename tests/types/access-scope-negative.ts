@@ -47,6 +47,7 @@ const factory = new ScopedRepositoryFactory(
 // same type the corresponding mint function produces.
 declare const adminScope: Extract<AccessScope, { kind: "admin" }>;
 declare const resellerScope: Extract<AccessScope, { kind: "reseller" }>;
+declare const customerScope: Extract<AccessScope, { kind: "customer" }>;
 
 // ── Negative proof 1: a bare literal cannot satisfy AccessScope ────────────
 // @ts-expect-error — `{ kind: 'admin' }` lacks the unforgeable brand property
@@ -86,6 +87,20 @@ export const resellerSellableLookup: (planId: PlanId) => Promise<SellablePlan | 
 // ── Negative proof 6: admin methods are REMOVED from the reseller surface ──
 // @ts-expect-error — `createPlan` is not part of ResellerCatalogRepository
 export const resellerCannotCreatePlan = factory.for(resellerScope).createPlan
+
+// ── Positive proof 6b: a CUSTOMER scope is narrowed to the SAME
+// ── sellable-only surface as a RESELLER scope (RepoFor<S> keys off "admin",
+// ── not "reseller" — design.md: "the live footgun that must be inverted").
+// ── This compiles only if a customer scope reaches the tier-bound branch.
+export const customerRepos: ResellerCatalogRepository = factory.for(customerScope)
+export const customerSellableLookup: (planId: PlanId) => Promise<SellablePlan | null> =
+  factory.for(customerScope).findSellablePlan
+
+// ── Negative proof 6c: admin methods are REMOVED from the customer surface
+// ── too — the same live footgun this change closes would have handed a
+// ── customer scope the FULL admin surface, including createPlan.
+// @ts-expect-error — `createPlan` is not part of ResellerCatalogRepository
+export const customerCannotCreatePlan = factory.for(customerScope).createPlan
 
 // ── Positive proof 7: tenantWhere accepts a table WITH reseller_id ────────
 // ADMIN → no reseller filter (undefined); RESELLER → reseller_id predicate.

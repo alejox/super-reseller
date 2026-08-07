@@ -5,6 +5,7 @@ import type {
   CredentialsRepository,
   UserCredentials,
 } from "../domain/credentials-repository";
+import { isUserRole } from "../domain/user-role";
 import { users } from "./identity.schema";
 
 
@@ -33,6 +34,14 @@ export class DrizzleCredentialsRepository implements CredentialsRepository {
       .where(eq(sql`lower(${users.email})`, normalizedEmail))
       .limit(1);
 
-    return row ? Object.freeze({ ...row }) : null;
+    if (!row) return null;
+    // `role` is text + CHECK, not a Postgres enum (design.md "Decision:
+    // role becomes text + CHECK"), so the database can no longer narrow it
+    // for us at the type level. `isUserRole` is the same guard
+    // `drizzle-users-repository`/`drizzle-sessions-repository` use.
+    if (!isUserRole(row.role)) {
+      throw new Error(`Unexpected role "${row.role}" for user ${row.id}`);
+    }
+    return Object.freeze({ ...row, role: row.role });
   }
 }

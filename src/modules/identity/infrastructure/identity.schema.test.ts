@@ -64,15 +64,34 @@ describe("identity schema — exactly one role per user (IT: Exactly One Role Pe
   });
 
   it("rejects persisting a user with role 'SUPERADMIN'", async () => {
-    // Drizzle wraps the driver error in DrizzleQueryError; the Postgres
-    // rejection (enum cast) is on `.cause`.
+    // `role` is text + CHECK, not a Postgres enum (design.md "Decision: role
+    // becomes text + CHECK; the user_role enum is dropped"), so an invalid
+    // role is rejected by `users_role_check`, not an enum-cast error. Drizzle
+    // wraps the driver error in DrizzleQueryError; the Postgres rejection is
+    // on `.cause`.
     await expect(
       insertUser(testDb, "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "super@example.com", "SUPERADMIN"),
     ).rejects.toMatchObject({
       cause: expect.objectContaining({
-        message: expect.stringMatching(/invalid input value for enum user_role/),
+        message: expect.stringMatching(/violates check constraint "users_role_check"/),
       }),
     });
+  });
+
+  it("persists a CUSTOMER user carrying a price tier (IT: CUSTOMER role accepted)", async () => {
+    await insertPriceTier(testDb, "aaaaaaaa-1111-4111-8111-111111111111", "RETAIL");
+    await insertUser(
+      testDb,
+      "bbbbbbbb-1111-4111-8111-111111111111",
+      "customer@example.com",
+      "CUSTOMER",
+      "aaaaaaaa-1111-4111-8111-111111111111",
+    );
+
+    const result = await testDb.db.execute<{ email: string; role: string }>(
+      sql`SELECT email, role FROM users WHERE id = 'bbbbbbbb-1111-4111-8111-111111111111'`,
+    );
+    expect(result.rows).toEqual([{ email: "customer@example.com", role: "CUSTOMER" }]);
   });
 
   it("persists ADMIN and RESELLER users", async () => {
@@ -149,6 +168,7 @@ describe("identity schema — exactly one role per user (IT: Exactly One Role Pe
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].consrc).toContain("'ADMIN'");
     expect(result.rows[0].consrc).toContain("'RESELLER'");
+    expect(result.rows[0].consrc).toContain("'CUSTOMER'");
   });
 
   it("carries reseller_id and no parent/hierarchy column (IT: Single-Level Reseller Ownership)", async () => {
@@ -166,7 +186,7 @@ describe("identity schema — exactly one role per user (IT: Exactly One Role Pe
   });
 });
 
-describe("identity schema — one price tier per reseller (IT: One Price Tier Per Reseller)", () => {
+describe("identity schema — tier requirement matches role (IT: Tier Requirement Matches Role)", () => {
   let testDb: TestDb;
 
   beforeEach(async () => {
@@ -184,13 +204,25 @@ describe("identity schema — one price tier per reseller (IT: One Price Tier Pe
   // "Activation" has no is_active column in this design (deactivated_at only),
   // so the schema-level guard IS the activation guard: inserting an active
   // RESELLER row (deactivated_at NULL) without a tier must be rejected by the
-  // users_reseller_requires_tier CHECK (design.md "Schema-level answers").
+  // users_tier_matches_role CHECK (design.md "Schema-level answers").
   it("rejects activating a RESELLER with no assigned price tier", async () => {
     await expect(
       insertUser(testDb, "11111111-1111-4111-8111-111111111111", "tierless@example.com", "RESELLER"),
     ).rejects.toMatchObject({
       cause: expect.objectContaining({
-        message: expect.stringMatching(/violates check constraint "users_reseller_requires_tier"/),
+        message: expect.stringMatching(/violates check constraint "users_tier_matches_role"/),
+      }),
+    });
+  });
+
+  // IT: Tier Requirement Matches Role — the symmetry is full: CUSTOMER is
+  // held to the exact same tier requirement as RESELLER.
+  it("rejects activating a CUSTOMER with no assigned price tier", async () => {
+    await expect(
+      insertUser(testDb, "77777777-1111-4111-8111-111111111111", "tierless-customer@example.com", "CUSTOMER"),
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({
+        message: expect.stringMatching(/violates check constraint "users_tier_matches_role"/),
       }),
     });
   });
@@ -222,6 +254,23 @@ describe("identity schema — one price tier per reseller (IT: One Price Tier Pe
     expect(result.rows).toEqual([{ email: "tiered@example.com", role: "RESELLER" }]);
   });
 
+  it("persists a CUSTOMER once a price tier is assigned", async () => {
+    await insertPriceTier(testDb, "88888888-3333-4333-8333-333333333333", "TIER_RETAIL");
+    await insertUser(
+      testDb,
+      "99999999-4444-4444-8444-444444444444",
+      "tiered-customer@example.com",
+      "CUSTOMER",
+      "88888888-3333-4333-8333-333333333333",
+    );
+
+    const result = await testDb.db.execute<{ email: string; role: string }>(
+      sql`SELECT email, role FROM users WHERE id = '99999999-4444-4444-8444-444444444444'`,
+    );
+
+    expect(result.rows).toEqual([{ email: "tiered-customer@example.com", role: "CUSTOMER" }]);
+  });
+
   it("rejects an ADMIN with an assigned price tier", async () => {
     // The design DDL is symmetric: the CHECK also demands ADMIN rows carry no
     // tier ((role='ADMIN' AND price_tier_id IS NULL)).
@@ -236,18 +285,19 @@ describe("identity schema — one price tier per reseller (IT: One Price Tier Pe
       ),
     ).rejects.toMatchObject({
       cause: expect.objectContaining({
-        message: expect.stringMatching(/violates check constraint "users_reseller_requires_tier"/),
+        message: expect.stringMatching(/violates check constraint "users_tier_matches_role"/),
       }),
     });
   });
 
-  it("declares the users_reseller_requires_tier CHECK constraint in the generated DDL", async () => {
+  it("declares the users_tier_matches_role CHECK constraint in the generated DDL", async () => {
     const result = await testDb.db.execute<{ conname: string; consrc: string }>(
-      sql`SELECT conname, pg_get_constraintdef(oid) AS consrc FROM pg_constraint WHERE conname = 'users_reseller_requires_tier'`,
+      sql`SELECT conname, pg_get_constraintdef(oid) AS consrc FROM pg_constraint WHERE conname = 'users_tier_matches_role'`,
     );
 
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0].consrc).toContain("'RESELLER'");
+    expect(result.rows[0].consrc).toContain("'CUSTOMER'");
     expect(result.rows[0].consrc).toContain("'ADMIN'");
     expect(result.rows[0].consrc).toContain("price_tier_id");
   });

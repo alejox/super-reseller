@@ -10,7 +10,7 @@ import { DrizzleCredentialsRepository } from "@/modules/identity/infrastructure/
 import { DrizzleSessionsRepository } from "@/modules/identity/infrastructure/drizzle-sessions-repository";
 import { NodeRsArgon2Hasher } from "@/modules/identity/infrastructure/node-rs-argon2-hasher";
 import { deactivateUserAsAdmin } from "./admin/deactivate-user";
-import { ADMIN_HOME, LOGIN_PATH, RESELLER_HOME } from "./auth/route-access";
+import { LOGIN_PATH, homeFor } from "./auth/route-access";
 import { logIn } from "./auth/log-in";
 import { sessionSecretKey } from "./auth/session-token";
 import { SESSION_COOKIE, getScope, getSession, requireRole } from "./dal";
@@ -84,7 +84,9 @@ export async function login(
     expires: result.expiresAt,
   });
 
-  redirect(result.user.role === "ADMIN" ? ADMIN_HOME : RESELLER_HOME);
+  // AUTH: Role-Aware Home Routing — the SAME exhaustive `homeFor` the route
+  // gate (`route-access.ts`) enforces on every later request.
+  redirect(homeFor(result.user.role));
 }
 
 export async function logout(): Promise<void> {

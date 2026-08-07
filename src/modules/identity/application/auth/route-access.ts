@@ -3,6 +3,7 @@ import type { SessionClaims } from "./session-token";
 export const LOGIN_PATH = "/login";
 export const ADMIN_HOME = "/admin";
 export const RESELLER_HOME = "/panel";
+export const CUSTOMER_HOME = "/account";
 
 export type RouteDecision =
   | Readonly<{ kind: "allow" }>
@@ -16,10 +17,20 @@ export type RouteDecision =
  */
 const PUBLIC_PATHS: readonly string[] = [LOGIN_PATH];
 
-/** Route prefixes and the role they demand. Order matters: first match wins. */
-const ROLE_GATED_PREFIXES: ReadonlyArray<readonly [string, "ADMIN" | "RESELLER" | "ANY"]> = [
+/**
+ * Route prefixes and the role they demand. Order matters: first match wins.
+ *
+ * `/panel` is RESELLER-only, not "ANY" (design.md: "`/panel` moving from
+ * 'ANY' to 'RESELLER' is a deliberate behaviour change beyond the customer
+ * fix: `app/panel/page.tsx` calls only `verifySession()`, so an ADMIN can
+ * browse it today and `tenantWhere` returns no filter for an admin scope —
+ * the reseller wallet and order views render unfiltered"). Admins are now
+ * redirected to `/admin`, their actual home.
+ */
+const ROLE_GATED_PREFIXES: ReadonlyArray<readonly [string, "ADMIN" | "RESELLER" | "CUSTOMER"]> = [
   [ADMIN_HOME, "ADMIN"],
-  [RESELLER_HOME, "ANY"],
+  [RESELLER_HOME, "RESELLER"],
+  [CUSTOMER_HOME, "CUSTOMER"],
 ];
 
 /**
@@ -31,8 +42,27 @@ function isUnder(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-function homeFor(role: SessionClaims["role"]): string {
-  return role === "ADMIN" ? ADMIN_HOME : RESELLER_HOME;
+/**
+ * Exhaustive switch, on purpose (design.md: `homeFor` becomes an exhaustive
+ * switch): a fourth role added to `UserRole` without a matching home here
+ * is a compile error, not a silent fallback to the wrong home. Exported so
+ * `actions.ts#login` (AUTH: Role-Aware Home Routing) redirects a fresh
+ * login to the SAME home this file's route gate enforces on every
+ * subsequent request — one source of truth for "which home is this role's".
+ */
+export function homeFor(role: SessionClaims["role"]): string {
+  switch (role) {
+    case "ADMIN":
+      return ADMIN_HOME;
+    case "RESELLER":
+      return RESELLER_HOME;
+    case "CUSTOMER":
+      return CUSTOMER_HOME;
+    default: {
+      const exhaustive: never = role;
+      throw new Error(`Unhandled role: ${JSON.stringify(exhaustive)}`);
+    }
+  }
 }
 
 /**
@@ -80,7 +110,7 @@ export function decideRouteAccess(
   }
 
   const [, requiredRole] = gate;
-  if (requiredRole !== "ANY" && claims.role !== requiredRole) {
+  if (claims.role !== requiredRole) {
     return { kind: "redirect", to: homeFor(claims.role) };
   }
 

@@ -95,11 +95,19 @@ describe("identity migration round trip (apply all, roll the identity stack back
       "users",
       "wallet_entry",
     ]);
-    expect(await userRoleTypeExists(testDb)).toBe(true);
-    expect(await roleColumnUsesEnum(testDb)).toBe(true);
+    // 0007 widens role to CUSTOMER and drops the enum (design.md "Decision:
+    // role becomes text + CHECK; the user_role enum is dropped") — the enum
+    // no longer exists once every migration through 0007 has applied.
+    expect(await userRoleTypeExists(testDb)).toBe(false);
+    expect(await roleColumnUsesEnum(testDb)).toBe(false);
     expect(await usersHasPasswordHash(testDb)).toBe(true);
 
     // Single-step rollbacks — the exact path `npm run db:rollback` uses.
+    // 0007 sits on top of everything else and must come off first.
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0007_customer_role");
+    expect(await userRoleTypeExists(testDb)).toBe(true);
+    expect(await roleColumnUsesEnum(testDb)).toBe(true);
+
     // 0004 sits on top of the identity stack and must come off first; it
     // touches no table structure, so the schema is unchanged after it.
     // Orders come off before the ledger they debit, which comes off before

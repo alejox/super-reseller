@@ -1,4 +1,4 @@
-import type { PriceTierId, ResellerId, UserId } from "./ids";
+import type { PriceTierId, ResellerId, TenantId, UserId } from "./ids";
 
 /**
  * AccessScope — opaque, branded, unforgeable scope token (design.md:
@@ -21,17 +21,28 @@ export type AccessScope =
       userId: UserId;
       resellerId: ResellerId;
       priceTierId: PriceTierId;
+    }
+  | {
+      readonly [scopeBrand]: true;
+      kind: "customer";
+      userId: UserId;
+      tenantId: TenantId;
+      priceTierId: PriceTierId;
+      /** null when the customer acts for itself; the ADMIN's id when acting on its behalf. */
+      actingAdminUserId: UserId | null;
     };
 
 /**
  * Maps a scope to its user role. Consumed by the 4.7 repository factory
  * (`for<S extends AccessScope>` returning role-narrowed repositories):
- * an ADMIN scope selects the admin repository shape, a RESELLER scope the
- * reseller one.
+ * an ADMIN scope selects the admin repository shape, RESELLER and CUSTOMER
+ * scopes both select the tier-bound sellable one.
  */
 export type ScopeRole<S extends AccessScope> = S extends { kind: "reseller" }
   ? "RESELLER"
-  : "ADMIN";
+  : S extends { kind: "customer" }
+    ? "CUSTOMER"
+    : "ADMIN";
 
 export function mintAdminScope(userId: UserId): AccessScope {
   return { [scopeBrand]: true, kind: "admin", userId };
@@ -43,4 +54,51 @@ export function mintResellerScope(
   priceTierId: PriceTierId,
 ): AccessScope {
   return { [scopeBrand]: true, kind: "reseller", userId, resellerId, priceTierId };
+}
+
+/**
+ * Mints a customer scope. `actingAdminUserId` is null when the customer
+ * acts for itself and the acting ADMIN's id when `dal.ts#actAsCustomer`
+ * mints on the customer's behalf (design.md "Decision: ADMIN-acting-as-
+ * customer is a scope downgrade, not a wider admin scope") — a *field* on
+ * the customer scope, invisible to SQL filtering, that reaches only the
+ * audit column (`placed_by`/`created_by` = `actingAdminUserId ?? userId`).
+ */
+export function mintCustomerScope(
+  userId: UserId,
+  tenantId: TenantId,
+  priceTierId: PriceTierId,
+  actingAdminUserId: UserId | null = null,
+): AccessScope {
+  return {
+    [scopeBrand]: true,
+    kind: "customer",
+    userId,
+    tenantId,
+    priceTierId,
+    actingAdminUserId,
+  };
+}
+
+/**
+ * The ONE reader of a scope's tenant id (design.md interfaces). Every other
+ * tenant-aware consumer — `tenantWhere`, the repository factory — goes
+ * through this function, never through `scope.kind` directly, so a fourth
+ * `AccessScope` variant is a compile error exactly HERE (the `default`
+ * branch's `never` assignment), and nowhere else has to be found and fixed.
+ */
+export function tenantIdOf(scope: AccessScope): TenantId | null {
+  switch (scope.kind) {
+    case "admin":
+      // Sees all — no tenant filter.
+      return null;
+    case "reseller":
+      return scope.resellerId;
+    case "customer":
+      return scope.tenantId;
+    default: {
+      const exhaustive: never = scope;
+      throw new Error(`Unhandled AccessScope kind: ${JSON.stringify(exhaustive)}`);
+    }
+  }
 }

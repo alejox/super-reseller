@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { verifySession } from "@/modules/identity/application/dal";
+import { requireRole, verifySession } from "@/modules/identity/application/dal";
 import { LogoutButton } from "../logout-button";
 import { PanelField, PanelGrid, PanelSkeleton } from "../session-panel";
 import { ResellerCatalog } from "./reseller-catalog";
@@ -31,6 +31,19 @@ async function PanelSession() {
   );
 }
 
+/**
+ * Defense in depth, mirroring `app/admin/page.tsx`'s `AdminAccessStatus`.
+ * `route-access.ts`'s proxy gate is an "optimistic check only" (AUTH: Proxy
+ * Performs an Optimistic Check Only — no database read), and this page
+ * previously called only `verifySession()`, so an ADMIN could render it and
+ * see unfiltered reseller wallet/order data: `tenantWhere` returns no
+ * filter for an admin scope. `requireRole("RESELLER")` closes that.
+ */
+async function PanelAccessStatus() {
+  await requireRole("RESELLER");
+  return <p className="sr-only">Acceso de revendedor verificado</p>;
+}
+
 export default function PanelPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-8 px-6 py-12">
@@ -48,6 +61,10 @@ export default function PanelPage() {
 
       <Suspense fallback={<PanelSkeleton />}>
         <PanelSession />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <PanelAccessStatus />
       </Suspense>
 
       <Suspense fallback={<PanelSkeleton />}>

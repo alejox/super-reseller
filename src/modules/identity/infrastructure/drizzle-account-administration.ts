@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { ModuleDb } from "@/shared/db/module-db";
 
-import type { AccessScope } from "../domain/access-scope";
+import { tenantIdOf, type AccessScope } from "../domain/access-scope";
 import type {
   AccountAdministration,
   DeactivationOutcome,
@@ -58,11 +58,12 @@ export class DrizzleAccountAdministration implements AccountAdministration {
   async deactivateUserAndRevokeSessions(userId: UserId): Promise<DeactivationOutcome | null> {
     const now = new Date();
     // Same isolation rule as `tenantWhere`: an ADMIN scope matches any row,
-    // a RESELLER scope only its own. Written inline because this is one raw
-    // statement, not a query builder chain.
-    const scope = this.scope;
-    const tenantPredicate =
-      scope.kind === "admin" ? sql`TRUE` : sql`reseller_id = ${scope.resellerId}`;
+    // a RESELLER or CUSTOMER scope only its own. Written inline because this
+    // is one raw statement, not a query builder chain. `tenantIdOf` is the
+    // one function that knows how to read a scope's own tenant id, whatever
+    // its kind.
+    const tenantId = tenantIdOf(this.scope);
+    const tenantPredicate = tenantId === null ? sql`TRUE` : sql`reseller_id = ${tenantId}`;
 
     const result = await this.db.execute<DeactivationRow>(sql`
       WITH deactivated AS (

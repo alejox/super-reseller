@@ -30,6 +30,9 @@ function deps(overrides: Partial<Parameters<typeof provisionReseller>[0]> = {}) 
     createReseller: async (user) => {
       created.push(user);
     },
+    createCustomer: async () => {
+      throw new Error("createCustomer must not be called here");
+    },
   };
 
   return {

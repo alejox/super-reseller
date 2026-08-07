@@ -1,4 +1,4 @@
-import type { AccessScope } from "../domain/access-scope";
+import { tenantIdOf, type AccessScope } from "../domain/access-scope";
 import type { UserId } from "../domain/ids";
 import {
   deactivateUser,
@@ -26,18 +26,18 @@ export class InMemoryScopedUsersRepository implements ScopedUsersRepository {
   }
 
   async listUsers(): Promise<readonly ScopedUserRow[]> {
-    // Local const so the discriminated-union narrowing of the scope's
-    // `kind` survives into the filter callback (property narrowing on
-    // `this.scope` does not propagate into closures).
-    const scope = this.scope;
-    if (scope.kind === "admin") return [...this.rows];
-    return this.rows.filter((row) => row.resellerId === scope.resellerId);
+    // `tenantIdOf` is the one function that knows how to read a scope's own
+    // tenant id, whatever its kind (admin/reseller/customer) — mirrors
+    // `tenantWhere`'s SQL-side semantics exactly.
+    const tenantId = tenantIdOf(this.scope);
+    if (tenantId === null) return [...this.rows];
+    return this.rows.filter((row) => row.resellerId === tenantId);
   }
 
   async deactivateUser(userId: UserId): Promise<ScopedUserRow | null> {
-    const scope = this.scope;
+    const tenantId = tenantIdOf(this.scope);
     const index = this.rows.findIndex(
-      (row) => row.id === userId && (scope.kind === "admin" || row.resellerId === scope.resellerId),
+      (row) => row.id === userId && (tenantId === null || row.resellerId === tenantId),
     );
     if (index === -1) return null;
     const updated = deactivateUser(this.rows[index]);

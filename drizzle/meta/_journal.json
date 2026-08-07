@@ -50,6 +50,13 @@
       "when": 1786043470264,
       "tag": "0006_sales_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1786320000000,
+      "tag": "0007_customer_role",
+      "breakpoints": true
     }
   ]
 }

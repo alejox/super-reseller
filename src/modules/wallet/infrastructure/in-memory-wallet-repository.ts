@@ -1,4 +1,4 @@
-import type { AccessScope } from "@/modules/identity/domain/access-scope";
+import { tenantIdOf, type AccessScope } from "@/modules/identity/domain/access-scope";
 
 import type { ResellerId } from "../domain/ids";
 import type { WalletRepository } from "../domain/wallet-repository";
@@ -37,22 +37,20 @@ export class InMemoryWalletRepository implements WalletRepository {
   }
 
   async listEntries(resellerId: ResellerId): Promise<readonly WalletEntry[]> {
-    const scope = this.scope;
+    const tenantId = tenantIdOf(this.scope);
     return this.store.entries
       .filter(
-        (entry) =>
-          entry.resellerId === resellerId &&
-          (scope.kind === "admin" || entry.resellerId === scope.resellerId),
+        (entry) => entry.resellerId === resellerId && (tenantId === null || entry.resellerId === tenantId),
       )
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async balancesByReseller(): Promise<ReadonlyMap<ResellerId, number>> {
-    const scope = this.scope;
+    const tenantId = tenantIdOf(this.scope);
     const visible =
-      scope.kind === "admin"
+      tenantId === null
         ? this.store.entries
-        : this.store.entries.filter((entry) => entry.resellerId === scope.resellerId);
+        : this.store.entries.filter((entry) => entry.resellerId === tenantId);
 
     const balances = new Map<ResellerId, number>();
     for (const entry of visible) {

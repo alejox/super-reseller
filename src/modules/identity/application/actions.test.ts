@@ -157,6 +157,51 @@ describe("login (AUTH-1: the session cookie carries every security flag design.m
   });
 });
 
+// AUTH: Role-Aware Home Routing — "A successful login MUST route the user
+// to exactly one home matching their role". `redirect()`'s thrown error
+// carries the destination in its digest (node_modules/next/dist/client/
+// components/redirect.js: `${code};${type};${url};${status};`).
+describe("login (AUTH: Role-Aware Home Routing)", () => {
+  const CUSTOMER_ID = "77777777-7777-4777-8777-777777777777";
+  const CUSTOMER_PASSWORD = "un cliente con contraseña larga";
+  const TIER_ID = "99999999-9999-4999-8999-999999999999";
+
+  beforeEach(async () => {
+    await testDb.db.execute(
+      sql`INSERT INTO price_tier (id, code, name, created_at) VALUES (${TIER_ID}, 'RETAIL', 'Retail', now())`,
+    );
+    const hasher = new NodeRsArgon2Hasher(PRODUCTION_HASHER_PARAMS);
+    await testDb.db.execute(
+      sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at)
+          VALUES (${CUSTOMER_ID}, 'customer@example.com', ${await hasher.hash(CUSTOMER_PASSWORD)}, 'CUSTOMER', ${CUSTOMER_ID}, ${TIER_ID}, now())`,
+    );
+  });
+
+  it("routes a CUSTOMER login to the customer home, not the reseller panel", async () => {
+    const { login } = await import("./actions");
+    let digest: string | undefined;
+    try {
+      await login(undefined, loginFormData("customer@example.com", CUSTOMER_PASSWORD));
+    } catch (thrown) {
+      digest = (thrown as { digest?: string }).digest;
+    }
+
+    expect(digest).toContain(";/account;");
+  });
+
+  it("routes an ADMIN login to /admin (unchanged)", async () => {
+    const { login } = await import("./actions");
+    let digest: string | undefined;
+    try {
+      await login(undefined, loginFormData("owner@example.com", PASSWORD));
+    } catch (thrown) {
+      digest = (thrown as { digest?: string }).digest;
+    }
+
+    expect(digest).toContain(";/admin;");
+  });
+});
+
 describe("logout (AUTH-1: clearing the cookie clears the row, not only the client copy)", () => {
   it("deletes the session cookie", async () => {
     const { logout } = await import("./actions");
