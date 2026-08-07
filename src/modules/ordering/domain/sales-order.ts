@@ -12,6 +12,14 @@ export type PlanPriceId = string;
 export type ResellerId = string;
 export type UserId = string;
 export type WalletEntryId = string;
+export type ProviderAccountId = string;
+
+/**
+ * The buyer discriminator (design.md "Decision: `sales_order` gains a buyer
+ * discriminator; no `customer_order` table"). `text` + CHECK, not a Postgres
+ * enum — same reasoning as `SalesOrderStatus` below.
+ */
+export type BuyerKind = "RESELLER" | "CUSTOMER";
 
 /**
  * Fulfilment happens entirely off-platform, over WhatsApp, by the owner
@@ -21,13 +29,24 @@ export type WalletEntryId = string;
  *
  * `text` + CHECK rather than a Postgres enum: statuses are the kind of thing
  * a product adds to, and an enum value can never be removed once shipped.
+ *
+ * `AWAITING_PAYMENT` is the seam `payment-gateway` will settle from
+ * (design.md). It is unreachable for a RESELLER order — `sales_order_
+ * status_buyer_check` — so it cannot park an unpaid reseller order.
  */
-export type SalesOrderStatus = "PENDING" | "FULFILLED" | "CANCELLED";
+export type SalesOrderStatus = "AWAITING_PAYMENT" | "PENDING" | "FULFILLED" | "CANCELLED";
 
 export type SalesOrder = Readonly<{
   id: SalesOrderId;
+  /**
+   * The ownership axis `tenantWhere` filters on. For a RESELLER order, the
+   * reseller's own tenant id; for a CUSTOMER order, the customer's own
+   * tenant id (design.md "Single-Level Tenant Ownership" — `reseller_id` is
+   * the generalized tenancy column, reused rather than renamed, mirroring
+   * `provider_account.reseller_id`).
+   */
   resellerId: ResellerId;
-  /** The user account that placed it — a reseller may later have several. */
+  /** The user account that placed it — the acting ADMIN's id when placed on a customer's behalf. */
   placedBy: UserId;
   planId: PlanId;
   /**
@@ -37,13 +56,18 @@ export type SalesOrder = Readonly<{
    * exact amount the sale was made at, for as long as the row exists.
    */
   planPriceId: PlanPriceId;
+  buyerKind: BuyerKind;
   /**
-   * The ledger row that paid for it. Storing the link — rather than trusting
+   * The ledger row that paid for it — RESELLER orders only. `null` for a
+   * CUSTOMER order: it never spends a reseller's ledger row at all
+   * (`sales_order_funding_check`). Storing the link — rather than trusting
    * that a debit happened — is what makes the pairing auditable: an order
    * with no wallet entry, or a wallet entry with no order, is visible as an
    * inconsistency instead of a silent one.
    */
-  walletEntryId: WalletEntryId;
+  walletEntryId: WalletEntryId | null;
+  /** The provider account being purchased for — CUSTOMER orders only. */
+  providerAccountId: ProviderAccountId | null;
   status: SalesOrderStatus;
   placedAt: Date;
   fulfilledAt: Date | null;
@@ -100,4 +124,20 @@ export type PlaceOrderCommand = Readonly<{
   planPriceId: PlanPriceId;
   amountMinor: number;
   currency: CurrencyCode;
+}>;
+
+/**
+ * The CUSTOMER purchase command. No `amountMinor`/`currency`: a customer
+ * order creates no wallet entry, so the sale amount lives ENTIRELY on the
+ * `plan_price` row `planPriceId` anchors — there is no second number here
+ * that could disagree with it.
+ */
+export type PlaceCustomerOrderCommand = Readonly<{
+  /** The customer's own tenant id (`tenantIdOf(scope)` for a customer scope). */
+  resellerId: ResellerId;
+  /** `actingAdminUserId ?? userId` — the acting ADMIN's id on a support purchase. */
+  placedBy: UserId;
+  planId: PlanId;
+  planPriceId: PlanPriceId;
+  providerAccountId: ProviderAccountId;
 }>;

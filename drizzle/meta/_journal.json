@@ -64,6 +64,13 @@
       "when": 1786082995286,
       "tag": "0008_provider_account",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786084629476,
+      "tag": "0009_customer_orders",
+      "breakpoints": true
     }
   ]
 }

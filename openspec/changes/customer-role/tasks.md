@@ -94,24 +94,24 @@ All three slices sit near or above the 800-line session budget on their own (~67
 
 ## Phase 3: Purchase Seam (PR3, ~730 lines)
 
-- [ ] 3.1 RED: reseller order without a `wallet_entry_id` is rejected; reseller order at `AWAITING_PAYMENT` is rejected (`sales_order_status_buyer_check`); customer order carrying a `wallet_entry_id` is rejected (`sales_order_funding_check`) — schema-level, PGlite
-- [ ] 3.2 RED: pre-existing "reused wallet entry rejected" test (double-spend guard) is re-run **unmodified** and still passes — the explicit regression proof (CP: Reseller Ordering Invariant Is Unchanged)
-- [ ] 3.3 GREEN: author `drizzle/0009_customer_orders.sql` — backfill order matters: `ADD COLUMN buyer_kind text` (nullable) → `UPDATE sales_order SET buyer_kind='RESELLER'` → `ALTER COLUMN buyer_kind SET NOT NULL` → add `provider_account_id uuid NULL REFERENCES provider_account(id) ON DELETE RESTRICT` → add all four CHECKs (`sales_order_buyer_kind_check`, `sales_order_funding_check`, redesigned `sales_order_status_check` incl. `AWAITING_PAYMENT`, `sales_order_status_buyer_check`, rewritten `sales_order_fulfilled_at_check`)
-- [ ] 3.4 GREEN: author `drizzle/down/0009_customer_orders.down.sql` — raises if any `buyer_kind='CUSTOMER'` row exists; else restores the two original CHECKs and drops the new columns
-- [ ] 3.5 GREEN: `ordering.schema.ts` — add `buyerKind`, `providerAccountId`, relax `walletEntryId` to nullable, replace the two existing CHECKs with the four from 3.3
-- [ ] 3.6 RED: `placeOrderAsReseller` (existing use case) is called unmodified and still produces a `buyer_kind='RESELLER'` row with a wallet entry — proves no reseller-path regression
-- [ ] 3.7 GREEN: `drizzle-ordering-repository.ts` `placeOrder` — set `buyerKind: 'RESELLER'` explicitly (no behavior change, just the new required column)
-- [ ] 3.8 RED: customer order use case rejects a client-submitted price and uses only the server-resolved `plan_price` at the customer's tier for the chosen `duration_days`; a duration with no current price at that tier is not offered, with no fallback tier (CP: Price Resolves From The Catalog At Purchase Time)
-- [ ] 3.9 RED: the recorded order references the resolved `plan_price_id`; a later price change does not retroactively alter it (CP: Order Anchors To A Resolved Price Row)
-- [ ] 3.10 RED: purchase records an `AWAITING_PAYMENT` order with no `wallet_entry` row and no wallet balance change (CP: Customer Order Awaits Payment, No Wallet Involvement)
-- [ ] 3.11 GREEN: `application/place-customer-order.ts` — mirrors `place-order.ts`'s shape; resolves price via the tier-bound `ResellerCatalogRepository` (now serving customers, per 1.17); `ordering.placeCustomerOrder(...)` inserts with `buyer_kind='CUSTOMER'`, `status='AWAITING_PAYMENT'`, `wallet_entry_id=null`, requires a `provider_account_id`
-- [ ] 3.12 GREEN: `domain/ordering-repository.ts` + `drizzle-ordering-repository.ts` — add `placeCustomerOrder` alongside existing `placeOrder`
-- [ ] 3.13 RED: a `CUSTOMER` purchases only against a `provider_account` they own; purchasing against an account they do not own is denied (CP: A Customer Starts Their Own Purchase)
-- [ ] 3.14 GREEN: wire ownership check into 3.11 — the `provider_account_id`'s `reseller_id` (tenant) must equal `tenantIdOf(scope)`
-- [ ] 3.15 RED: an `ADMIN` starts a purchase naming a target customer; the order is owned by the customer's tenant, not the admin's; a `RESELLER` is denied (CP: ADMIN May Start A Purchase On A Customer's Behalf)
-- [ ] 3.16 GREEN: `application/admin/place-order-for-customer.ts` — `requireRole("ADMIN")` → `actAsCustomer(targetUserId)` → `assertActorAuthorizedForSubject` (1.23) → 3.11's use case, `placed_by = actingAdminUserId ?? userId`
-- [ ] 3.17 RED: contract suite (both adapters) — customer B's order query excludes customer A's orders; a reseller-scoped order query returns none (CP: Order Isolation)
-- [ ] 3.18 GREEN: extend `ordering-repository.contract.test.ts` with the customer-order seed rows and isolation assertions
-- [ ] 3.19 RED: a customer with zero `provider_account` rows opens the purchase flow on account creation, not an empty selector (CP: Purchase Flow Opens On Account Creation When Empty)
-- [ ] 3.20 GREEN: `app/account/purchase/**` — duration selector UI (1/3/6/12 months from `duration_days`), account picker that redirects to account creation when the list is empty, resolved-price display, confirm action wired to 3.11/3.16
-- [ ] 3.21 Verify: `npx tsc --noEmit`, `npm run lint`, and `npm test` pass across the full change; migrations 0007–0009 apply and roll back cleanly on an empty PGlite/Neon branch
+- [x] 3.1 RED: reseller order without a `wallet_entry_id` is rejected; reseller order at `AWAITING_PAYMENT` is rejected (`sales_order_status_buyer_check`); customer order carrying a `wallet_entry_id` is rejected (`sales_order_funding_check`) — schema-level, PGlite
+- [x] 3.2 RED: pre-existing "reused wallet entry rejected" test (double-spend guard) is re-run **unmodified** and still passes — the explicit regression proof (CP: Reseller Ordering Invariant Is Unchanged)
+- [x] 3.3 GREEN: author `drizzle/0009_customer_orders.sql` — backfill order matters: `ADD COLUMN buyer_kind text` (nullable) → `UPDATE sales_order SET buyer_kind='RESELLER'` → `ALTER COLUMN buyer_kind SET NOT NULL` → add `provider_account_id uuid NULL REFERENCES provider_account(id) ON DELETE RESTRICT` → add all four CHECKs (`sales_order_buyer_kind_check`, `sales_order_funding_check`, redesigned `sales_order_status_check` incl. `AWAITING_PAYMENT`, `sales_order_status_buyer_check`, rewritten `sales_order_fulfilled_at_check`)
+- [x] 3.4 GREEN: author `drizzle/down/0009_customer_orders.down.sql` — raises if any `buyer_kind='CUSTOMER'` row exists; else restores the two original CHECKs and drops the new columns
+- [x] 3.5 GREEN: `ordering.schema.ts` — add `buyerKind`, `providerAccountId`, relax `walletEntryId` to nullable, replace the two existing CHECKs with the four from 3.3
+- [x] 3.6 RED: `placeOrderAsReseller` (existing use case) is called unmodified and still produces a `buyer_kind='RESELLER'` row with a wallet entry — proves no reseller-path regression
+- [x] 3.7 GREEN: `drizzle-ordering-repository.ts` `placeOrder` — set `buyerKind: 'RESELLER'` explicitly (no behavior change, just the new required column)
+- [x] 3.8 RED: customer order use case rejects a client-submitted price and uses only the server-resolved `plan_price` at the customer's tier for the chosen `duration_days`; a duration with no current price at that tier is not offered, with no fallback tier (CP: Price Resolves From The Catalog At Purchase Time)
+- [x] 3.9 RED: the recorded order references the resolved `plan_price_id`; a later price change does not retroactively alter it (CP: Order Anchors To A Resolved Price Row)
+- [x] 3.10 RED: purchase records an `AWAITING_PAYMENT` order with no `wallet_entry` row and no wallet balance change (CP: Customer Order Awaits Payment, No Wallet Involvement)
+- [x] 3.11 GREEN: `application/place-customer-order.ts` — mirrors `place-order.ts`'s shape; resolves price via the tier-bound `ResellerCatalogRepository` (now serving customers, per 1.17); `ordering.placeCustomerOrder(...)` inserts with `buyer_kind='CUSTOMER'`, `status='AWAITING_PAYMENT'`, `wallet_entry_id=null`, requires a `provider_account_id`
+- [x] 3.12 GREEN: `domain/ordering-repository.ts` + `drizzle-ordering-repository.ts` — add `placeCustomerOrder` alongside existing `placeOrder`
+- [x] 3.13 RED: a `CUSTOMER` purchases only against a `provider_account` they own; purchasing against an account they do not own is denied (CP: A Customer Starts Their Own Purchase)
+- [x] 3.14 GREEN: wire ownership check into 3.11 — the `provider_account_id`'s `reseller_id` (tenant) must equal `tenantIdOf(scope)`
+- [x] 3.15 RED: an `ADMIN` starts a purchase naming a target customer; the order is owned by the customer's tenant, not the admin's; a `RESELLER` is denied (CP: ADMIN May Start A Purchase On A Customer's Behalf)
+- [x] 3.16 GREEN: `application/admin/place-order-for-customer.ts` — `requireRole("ADMIN")` → `actAsCustomer(targetUserId)` → `assertActorAuthorizedForSubject` (1.23) → 3.11's use case, `placed_by = actingAdminUserId ?? userId`
+- [x] 3.17 RED: contract suite (both adapters) — customer B's order query excludes customer A's orders; a reseller-scoped order query returns none (CP: Order Isolation)
+- [x] 3.18 GREEN: extend `ordering-repository.contract.test.ts` with the customer-order seed rows and isolation assertions
+- [x] 3.19 RED: a customer with zero `provider_account` rows opens the purchase flow on account creation, not an empty selector (CP: Purchase Flow Opens On Account Creation When Empty)
+- [x] 3.20 GREEN: `app/account/purchase/**` — duration selector UI (1/3/6/12 months from `duration_days`), account picker that redirects to account creation when the list is empty, resolved-price display, confirm action wired to 3.11/3.16
+- [x] 3.21 Verify: `npx tsc --noEmit`, `npm run lint`, and `npm test` pass across the full change; migrations 0007–0009 apply and roll back cleanly on an empty PGlite/Neon branch

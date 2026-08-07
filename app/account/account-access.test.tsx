@@ -100,4 +100,32 @@ describe("AccountPage (PA: A Customer Creates Their Own Provider Account)", () =
 
     expect(screen.getByText("Todavía no tiene cuentas registradas.")).toBeVisible();
   });
+
+  // CP: Purchase Flow Opens On Account Creation When Empty — with zero
+  // provider_account rows there is nothing to buy a duration FOR, so no
+  // purchase control is offered at all; only the create-account form is.
+  it("offers no purchase control when this customer owns no accounts yet", async () => {
+    listSellablePlans.mockResolvedValue([sellablePlan("service-1", "Stella TV")]);
+
+    await renderWorkspace();
+
+    expect(screen.queryByRole("button", { name: "Comprar" })).not.toBeInTheDocument();
+  });
+
+  // CP: Price Resolves From The Catalog At Purchase Time (UI half) — the
+  // duration selector shows only durations sellable at THIS customer's
+  // tier, for the account's OWN service, with the resolved price on screen
+  // before the buyer confirms.
+  it("offers a duration + price row per sellable plan for the account's own service", async () => {
+    listForTenant.mockResolvedValue([account("pa-1", "stella_juan_2024", "service-1")]);
+    listSellablePlans.mockResolvedValue([sellablePlan("service-1", "Stella TV")]);
+
+    await renderWorkspace();
+
+    expect(screen.getByText("1 mes")).toBeVisible();
+    // Locale-formatted currency punctuation varies across ICU/locale data
+    // versions (money.test.ts's own convention) — assert on the digits only.
+    expect(screen.getByText((_, node) => node?.textContent?.replace(/\D/g, "") === "10000")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Comprar" })).toBeVisible();
+  });
 });

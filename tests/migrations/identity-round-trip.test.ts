@@ -104,9 +104,10 @@ describe("identity migration round trip (apply all, roll the identity stack back
     expect(await usersHasPasswordHash(testDb)).toBe(true);
 
     // Single-step rollbacks — the exact path `npm run db:rollback` uses.
-    // 0008_provider_account sits on top of everything else and must come off
-    // first; it references no CUSTOMER-only state, so its rollback is
-    // unconditional.
+    // 0009_customer_orders and 0008_provider_account sit on top of
+    // everything else and must come off first; neither references a
+    // CUSTOMER row on the users table, so both roll back unconditionally.
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0009_customer_orders");
     expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0008_provider_account");
     expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0007_customer_role");
     expect(await userRoleTypeExists(testDb)).toBe(true);

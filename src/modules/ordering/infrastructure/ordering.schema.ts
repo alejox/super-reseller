@@ -3,6 +3,7 @@ import { check, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-cor
 
 import { plan, planPrice } from "@/modules/catalog/infrastructure/catalog.schema";
 import { users } from "@/modules/identity/infrastructure/identity.schema";
+import { providerAccount } from "@/modules/provider-accounts/infrastructure/provider-account.schema";
 import { walletEntry } from "@/modules/wallet/infrastructure/wallet.schema";
 
 /**
@@ -36,14 +37,34 @@ export const salesOrder = pgTable(
       .notNull()
       .references(() => planPrice.id, { onDelete: "restrict" }),
     /**
-     * The ledger row that paid for this order. UNIQUE: one debit funds
-     * exactly one order, so a double-spend of the same entry is rejected by
-     * the database rather than by a code path that has to remember.
+     * The ledger row that paid for this order — RESELLER orders only
+     * (design.md "Decision: `sales_order` gains a buyer discriminator; no
+     * `customer_order` table"). NULL for a CUSTOMER order: `sales_order_
+     * funding_check` requires it, so a customer order can never spend a
+     * reseller's ledger row. `NOT NULL` is dropped, but `UNIQUE` is
+     * untouched and stays global — Postgres ignores NULLs in a UNIQUE
+     * index, so "one ledger entry funds exactly one order" is enforced
+     * identically to before this change (CP: Reseller Ordering Invariant
+     * Is Unchanged).
      */
     walletEntryId: uuid("wallet_entry_id")
-      .notNull()
       .unique()
       .references(() => walletEntry.id, { onDelete: "restrict" }),
+    /**
+     * The buyer discriminator (design.md). `text` + CHECK, not a Postgres
+     * enum — same reasoning as `status` below: a value added to an
+     * existing enum can never be removed once shipped.
+     */
+    buyerKind: text("buyer_kind").notNull(),
+    /**
+     * The provider account being purchased for — CUSTOMER orders only.
+     * NULL for a RESELLER order: `sales_order_funding_check` requires it.
+     * RESTRICT, like every other reference an order carries: an account an
+     * order points at can never be deleted out from under it.
+     */
+    providerAccountId: uuid("provider_account_id").references(() => providerAccount.id, {
+      onDelete: "restrict",
+    }),
     status: text("status").notNull(),
     placedAt: timestamp("placed_at", { withTimezone: true }).notNull(),
     fulfilledAt: timestamp("fulfilled_at", { withTimezone: true }),
@@ -54,16 +75,40 @@ export const salesOrder = pgTable(
     // queue reads "everything still pending".
     index("sales_order_reseller_idx").on(table.resellerId, table.placedAt),
     index("sales_order_status_idx").on(table.status, table.placedAt),
+    check("sales_order_buyer_kind_check", sql`${table.buyerKind} IN ('RESELLER', 'CUSTOMER')`),
+    // The reseller invariant, proved unweakened (design.md): a RESELLER row
+    // must carry a wallet entry and no provider account; a CUSTOMER row
+    // must carry a provider account and NEVER a wallet entry — so a
+    // customer order can never spend a reseller's ledger row. Every
+    // combination of buyer_kind × wallet_entry_id × provider_account_id is
+    // decided; none is left open.
+    check(
+      "sales_order_funding_check",
+      sql`(${table.buyerKind} = 'RESELLER' AND ${table.walletEntryId} IS NOT NULL AND ${table.providerAccountId} IS NULL)
+       OR (${table.buyerKind} = 'CUSTOMER' AND ${table.walletEntryId} IS NULL AND ${table.providerAccountId} IS NOT NULL)`,
+    ),
+    // Redesigned together with sales_order_status_buyer_check below, not
+    // appended to: AWAITING_PAYMENT is the seam `payment-gateway` will
+    // settle from, and it must be reachable by the schema before it can be
+    // made unreachable for a reseller.
     check(
       "sales_order_status_check",
-      sql`${table.status} IN ('PENDING', 'FULFILLED', 'CANCELLED')`,
+      sql`${table.status} IN ('AWAITING_PAYMENT', 'PENDING', 'FULFILLED', 'CANCELLED')`,
     ),
-    // A status and its timestamp cannot disagree: FULFILLED requires a
-    // fulfilment date, and anything else forbids one. Without this, a row
-    // could claim delivery with no date, or a date with no delivery.
+    // AWAITING_PAYMENT is unreachable for a RESELLER order: the new status
+    // cannot park an unpaid reseller order, so reseller behavior is
+    // strictly unchanged. A CUSTOMER order may hold any status.
+    check(
+      "sales_order_status_buyer_check",
+      sql`(${table.buyerKind} = 'RESELLER' AND ${table.status} IN ('PENDING', 'FULFILLED', 'CANCELLED'))
+       OR (${table.buyerKind} = 'CUSTOMER')`,
+    ),
+    // Rewritten as one boolean equality — logically identical to the
+    // original two-disjunct form (`status` is NOT NULL, so neither side is
+    // nullable) — and it now covers four statuses without enumerating them.
     check(
       "sales_order_fulfilled_at_check",
-      sql`(${table.status} = 'FULFILLED' AND ${table.fulfilledAt} IS NOT NULL) OR (${table.status} <> 'FULFILLED' AND ${table.fulfilledAt} IS NULL)`,
+      sql`(${table.status} = 'FULFILLED') = (${table.fulfilledAt} IS NOT NULL)`,
     ),
   ],
 );

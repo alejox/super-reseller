@@ -1,5 +1,6 @@
 import { accountDeps } from "./account-deps";
 import { CreateProviderAccountForm } from "./provider-account-form";
+import { PurchaseSection } from "./purchase-section";
 
 /**
  * The dynamic half of the customer panel — mirrors
@@ -79,6 +80,13 @@ export async function AccountWorkspace() {
         </p>
       ) : (
         <CreateProviderAccountForm services={services} />
+      )}
+
+      {/* CP: Purchase Flow Opens On Account Creation When Empty — with no
+          accounts there is nothing to buy a duration FOR, so this section
+          simply does not render rather than showing an empty selector. */}
+      {accounts.length > 0 && (
+        <PurchaseSection accounts={accounts} sellablePlans={sellablePlans} />
       )}
     </section>
   );

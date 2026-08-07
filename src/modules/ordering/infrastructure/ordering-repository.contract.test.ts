@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/pglite/migrator";
 
 import { closeTestDb, createTestDb, type TestDb } from "../../../../tests/support/pglite-db";
-import { mintAdminScope, mintResellerScope } from "@/modules/identity/domain/access-scope";
+import { mintAdminScope, mintCustomerScope, mintResellerScope } from "@/modules/identity/domain/access-scope";
 import { DrizzleOrderingRepository } from "./drizzle-ordering-repository";
 
 /**
@@ -35,9 +35,15 @@ const USER_B = "bbbb2222-0000-4000-8000-000000000003";
 const SERVICE = "cccc3333-0000-4000-8000-000000000004";
 const PLAN = "dddd4444-0000-4000-8000-000000000005";
 const PRICE = "eeee5555-0000-4000-8000-000000000006";
+const CUSTOMER_A = "33333333-3333-4333-8333-333333333333";
+const CUSTOMER_B = "44444444-4444-4444-8444-444444444444";
+const PROVIDER_ACCOUNT_A = "55555555-5555-4555-8555-555555555555";
+const PROVIDER_ACCOUNT_B = "66666666-6666-4666-8666-666666666666";
 
 const adminScope = mintAdminScope(ADMIN);
 const scopeA = mintResellerScope(USER_A, RESELLER_A, TIER);
+const customerScopeA = mintCustomerScope(CUSTOMER_A, CUSTOMER_A, TIER);
+const customerScopeB = mintCustomerScope(CUSTOMER_B, CUSTOMER_B, TIER);
 
 let testDb: TestDb;
 
@@ -47,9 +53,13 @@ async function seed() {
   await db.execute(sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${ADMIN}, 'admin@example.com', '$argon2id$x', 'ADMIN', NULL, NULL, now())`);
   await db.execute(sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${USER_A}, 'a@example.com', '$argon2id$x', 'RESELLER', ${RESELLER_A}, ${TIER}, now())`);
   await db.execute(sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${USER_B}, 'b@example.com', '$argon2id$x', 'RESELLER', ${RESELLER_B}, ${TIER}, now())`);
+  await db.execute(sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${CUSTOMER_A}, 'cust-a@example.com', '$argon2id$x', 'CUSTOMER', ${CUSTOMER_A}, ${TIER}, now())`);
+  await db.execute(sql`INSERT INTO users (id, email, password_hash, role, reseller_id, price_tier_id, created_at) VALUES (${CUSTOMER_B}, 'cust-b@example.com', '$argon2id$x', 'CUSTOMER', ${CUSTOMER_B}, ${TIER}, now())`);
   await db.execute(sql`INSERT INTO service (id, slug, name, created_at, updated_at) VALUES (${SERVICE}, 'netflix', 'Netflix', now(), now())`);
   await db.execute(sql`INSERT INTO plan (id, service_id, name, kind, duration_days, created_at, updated_at) VALUES (${PLAN}, ${SERVICE}, '1 Pantalla', 'SCREEN', 30, now(), now())`);
   await db.execute(sql`INSERT INTO plan_price (id, plan_id, price_tier_id, amount_minor, currency, effective_from) VALUES (${PRICE}, ${PLAN}, ${TIER}, 15000, 'COP', now())`);
+  await db.execute(sql`INSERT INTO provider_account (id, reseller_id, service_id, panel_username, created_by, created_at) VALUES (${PROVIDER_ACCOUNT_A}, ${CUSTOMER_A}, ${SERVICE}, 'cust_a_user', ${CUSTOMER_A}, now())`);
+  await db.execute(sql`INSERT INTO provider_account (id, reseller_id, service_id, panel_username, created_by, created_at) VALUES (${PROVIDER_ACCOUNT_B}, ${CUSTOMER_B}, ${SERVICE}, 'cust_b_user', ${CUSTOMER_B}, now())`);
 }
 
 async function credit(amountMinor: number, resellerId = RESELLER_A) {
@@ -102,6 +112,22 @@ describe("DrizzleOrderingRepository.placeOrder", () => {
     expect(view?.amountMinor).toBe(15_000);
     expect(view?.planName).toBe("1 Pantalla");
     expect(view?.serviceName).toBe("Netflix");
+  });
+
+  // Task 3.6: the existing reseller use case, called UNMODIFIED, still
+  // produces a buyer_kind='RESELLER' row with a wallet entry and no
+  // provider account — proves no reseller-path regression from the schema
+  // widening.
+  it("still records buyer_kind='RESELLER' with a wallet entry and no provider account", async () => {
+    await credit(50_000);
+    const repo = new DrizzleOrderingRepository(testDb.db, scopeA);
+
+    const outcome = await repo.placeOrder(command());
+    if (!outcome.ok) throw new Error("expected success");
+
+    expect(outcome.order.buyerKind).toBe("RESELLER");
+    expect(outcome.order.walletEntryId).toEqual(expect.any(String));
+    expect(outcome.order.providerAccountId).toBeNull();
   });
 
   it("links the order to the exact ledger row that paid for it", async () => {
@@ -262,5 +288,78 @@ describe("DrizzleOrderingRepository scoping and fulfilment", () => {
     // the scope for the whole guard.
     const asA = new DrizzleOrderingRepository(testDb.db, scopeA);
     expect(await asA.fulfilOrder(outcome.order.id, null)).not.toBeNull();
+  });
+});
+
+describe("DrizzleOrderingRepository.placeCustomerOrder", () => {
+  function customerCommand(overrides: Record<string, unknown> = {}) {
+    return {
+      resellerId: CUSTOMER_A,
+      placedBy: CUSTOMER_A,
+      planId: PLAN,
+      planPriceId: PRICE,
+      providerAccountId: PROVIDER_ACCOUNT_A,
+      ...overrides,
+    };
+  }
+
+  // CP: Customer Order Awaits Payment, No Wallet Involvement.
+  it("records an AWAITING_PAYMENT order with no wallet_entry row and no balance change", async () => {
+    const repo = new DrizzleOrderingRepository(testDb.db, customerScopeA);
+
+    const order = await repo.placeCustomerOrder(customerCommand());
+
+    expect(order.status).toBe("AWAITING_PAYMENT");
+    expect(order.buyerKind).toBe("CUSTOMER");
+    expect(order.walletEntryId).toBeNull();
+    expect(order.providerAccountId).toBe(PROVIDER_ACCOUNT_A);
+
+    const entries = await testDb.db.execute<{ count: number } & Record<string, unknown>>(
+      sql`SELECT count(*)::int AS count FROM wallet_entry`,
+    );
+    expect(Number(entries.rows[0]?.count)).toBe(0);
+    expect(await balanceOf(CUSTOMER_A)).toBe(0);
+  });
+
+  // CP: Order Anchors To A Resolved Price Row.
+  it("anchors to the resolved plan_price_id, unaffected by a later price change", async () => {
+    const repo = new DrizzleOrderingRepository(testDb.db, customerScopeA);
+
+    const order = await repo.placeCustomerOrder(customerCommand());
+    expect(order.planPriceId).toBe(PRICE);
+
+    // The plan's price is subsequently replaced — a NEW plan_price row, the
+    // old one closed out. The already-placed order still points at PRICE.
+    await testDb.db.execute(
+      sql`UPDATE plan_price SET effective_to = now() WHERE id = ${PRICE}`,
+    );
+    await testDb.db.execute(
+      sql`INSERT INTO plan_price (id, plan_id, price_tier_id, amount_minor, currency, effective_from) VALUES (${crypto.randomUUID()}, ${PLAN}, ${TIER}, 25000, 'COP', now())`,
+    );
+
+    const [view] = await repo.listOrdersForReseller(CUSTOMER_A);
+    expect(view?.order.planPriceId).toBe(PRICE);
+    expect(view?.amountMinor).toBe(15_000);
+  });
+
+  // CP: Order Isolation.
+  it("excludes another customer's orders from a customer-scoped query", async () => {
+    const asA = new DrizzleOrderingRepository(testDb.db, customerScopeA);
+    const asB = new DrizzleOrderingRepository(testDb.db, customerScopeB);
+    await asA.placeCustomerOrder(customerCommand());
+    await asB.placeCustomerOrder(
+      customerCommand({ resellerId: CUSTOMER_B, placedBy: CUSTOMER_B, providerAccountId: PROVIDER_ACCOUNT_B }),
+    );
+
+    expect(await asB.listOrdersForReseller(CUSTOMER_A)).toEqual([]);
+  });
+
+  it("returns none of the customer orders to a reseller-scoped query", async () => {
+    const asA = new DrizzleOrderingRepository(testDb.db, customerScopeA);
+    await asA.placeCustomerOrder(customerCommand());
+
+    const asReseller = new DrizzleOrderingRepository(testDb.db, scopeA);
+
+    expect(await asReseller.listOrdersForReseller(CUSTOMER_A)).toEqual([]);
   });
 });

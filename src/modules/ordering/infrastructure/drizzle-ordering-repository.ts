@@ -13,6 +13,8 @@ import type {
 } from "../domain/ordering-repository";
 import {
   fulfilOrder as fulfilOrderEntity,
+  type BuyerKind,
+  type PlaceCustomerOrderCommand,
   type PlaceOrderCommand,
   type ResellerId,
   type SalesOrder,
@@ -101,6 +103,11 @@ export class DrizzleOrderingRepository implements OrderingRepository {
         planId: command.planId,
         planPriceId: command.planPriceId,
         walletEntryId: entryId,
+        // Explicit, not a column default: task 3.7 — the reseller path is
+        // otherwise byte-for-byte unmodified, so the discriminator is set
+        // here rather than relied upon to default correctly.
+        buyerKind: "RESELLER",
+        providerAccountId: null,
         status: "PENDING",
         placedAt: now,
         fulfilledAt: null,
@@ -115,13 +122,57 @@ export class DrizzleOrderingRepository implements OrderingRepository {
           placedBy: command.placedBy,
           planId: command.planId,
           planPriceId: command.planPriceId,
+          buyerKind: "RESELLER" as const,
           walletEntryId: entryId,
+          providerAccountId: null,
           status: "PENDING" as const,
           placedAt: now,
           fulfilledAt: null,
           note: null,
         }),
       } as const;
+    });
+  }
+
+  /**
+   * CUSTOMER purchase (CP: Customer Order Awaits Payment, No Wallet
+   * Involvement). A single INSERT — no balance to check, no debit to make,
+   * so there is no transaction and no advisory lock to take: two concurrent
+   * purchases against the same tier's price cannot race each other into an
+   * inconsistent balance, because there is no balance here at all.
+   */
+  async placeCustomerOrder(command: PlaceCustomerOrderCommand): Promise<SalesOrder> {
+    const orderId = crypto.randomUUID();
+    const now = new Date();
+
+    await this.db.insert(salesOrder).values({
+      id: orderId,
+      resellerId: command.resellerId,
+      placedBy: command.placedBy,
+      planId: command.planId,
+      planPriceId: command.planPriceId,
+      walletEntryId: null,
+      buyerKind: "CUSTOMER",
+      providerAccountId: command.providerAccountId,
+      status: "AWAITING_PAYMENT",
+      placedAt: now,
+      fulfilledAt: null,
+      note: null,
+    });
+
+    return Object.freeze({
+      id: orderId,
+      resellerId: command.resellerId,
+      placedBy: command.placedBy,
+      planId: command.planId,
+      planPriceId: command.planPriceId,
+      buyerKind: "CUSTOMER" as const,
+      walletEntryId: null,
+      providerAccountId: command.providerAccountId,
+      status: "AWAITING_PAYMENT" as const,
+      placedAt: now,
+      fulfilledAt: null,
+      note: null,
     });
   }
 
@@ -147,7 +198,11 @@ export class DrizzleOrderingRepository implements OrderingRepository {
       .orderBy(desc(salesOrder.placedAt));
 
     return rows.map((row) => ({
-      order: Object.freeze({ ...row.order, status: row.order.status as SalesOrderStatus }),
+      order: Object.freeze({
+        ...row.order,
+        status: row.order.status as SalesOrderStatus,
+        buyerKind: row.order.buyerKind as BuyerKind,
+      }),
       amountMinor: Number(row.amountMinor),
       currency: row.currency,
       planName: row.planName,
@@ -175,6 +230,7 @@ export class DrizzleOrderingRepository implements OrderingRepository {
     const current = Object.freeze({
       ...existing,
       status: existing.status as SalesOrderStatus,
+      buyerKind: existing.buyerKind as BuyerKind,
     });
     if (current.status !== "PENDING") return null;
 
@@ -201,6 +257,12 @@ export class DrizzleOrderingRepository implements OrderingRepository {
       )
       .returning();
 
-    return row ? Object.freeze({ ...row, status: row.status as SalesOrderStatus }) : null;
+    return row
+      ? Object.freeze({
+          ...row,
+          status: row.status as SalesOrderStatus,
+          buyerKind: row.buyerKind as BuyerKind,
+        })
+      : null;
   }
 }

@@ -1,4 +1,5 @@
 import type {
+  PlaceCustomerOrderCommand,
   PlaceOrderCommand,
   ResellerId,
   SalesOrder,
@@ -37,6 +38,15 @@ export type PlaceOrderOutcome =
  */
 export interface OrderingRepository {
   placeOrder(command: PlaceOrderCommand): Promise<PlaceOrderOutcome>;
+
+  /**
+   * CUSTOMER purchase (CP: Customer Order Awaits Payment, No Wallet
+   * Involvement). No balance check, no debit, no wallet entry — inserts a
+   * `buyer_kind='CUSTOMER'`, `status='AWAITING_PAYMENT'` row with
+   * `wallet_entry_id` NULL. Always succeeds or throws; there is no
+   * "insufficient funds" outcome because no funds are checked.
+   */
+  placeCustomerOrder(command: PlaceCustomerOrderCommand): Promise<SalesOrder>;
 
   /** Orders visible to the current scope, newest first. */
   listOrders(status?: SalesOrderStatus): Promise<readonly SalesOrderView[]>;
