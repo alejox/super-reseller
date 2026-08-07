@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { adminCustomerDeps } from "./admin-customers";
 import { CreateCustomerForm } from "./customer-form";
 
@@ -54,6 +56,9 @@ export async function CustomersWorkspace() {
                   <th className={TH_CLASS} scope="col">Correo electrónico</th>
                   <th className={TH_CLASS} scope="col">Nivel</th>
                   <th className={TH_CLASS} scope="col">Estado</th>
+                  <th className={TH_CLASS} scope="col">
+                    <span className="sr-only">Detalle</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -65,6 +70,11 @@ export async function CustomersWorkspace() {
                       <td className={TD_CLASS}>{tier ? `${tier.code} · ${tier.name}` : "—"}</td>
                       <td className={TD_CLASS}>
                         {customer.deactivatedAt === null ? "Activo" : "Desactivado"}
+                      </td>
+                      <td className={TD_CLASS}>
+                        <Link className="text-emerald-700 hover:underline" href={`/admin/customers/${customer.id}`}>
+                          Ver cuentas
+                        </Link>
                       </td>
                     </tr>
                   );

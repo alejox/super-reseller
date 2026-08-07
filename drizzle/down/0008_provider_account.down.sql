@@ -1,0 +1,11 @@
+-- Hand-authored down migration for 0008_provider_account.sql (design.md:
+-- "Decision: hand-authored down migrations").
+--
+-- One statement, as the migrator requires (src/shared/db/migrator.ts runs
+-- this file as a single prepared statement). The two foreign keys, both
+-- indexes, the CHECK constraint and the RLS flag all belong to the table, so
+-- they go with it — no separate DROP is needed, and adding one would break
+-- the single-statement rule. Clean: nothing else references
+-- `provider_account` yet (the purchase seam's `sales_order.provider_
+-- account_id` lands in slice 3, on top of this one).
+DROP TABLE IF EXISTS "provider_account";

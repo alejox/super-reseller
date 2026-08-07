@@ -70,27 +70,27 @@ All three slices sit near or above the 800-line session budget on their own (~67
 
 ## Phase 2: Provider Accounts (PR2, ~630 lines)
 
-- [ ] 2.1 RED: `provider_account.schema.ts` — schema inspection test fails while the table does not exist (drives the migration)
-- [ ] 2.2 GREEN: author `drizzle/0008_provider_account.sql` — `provider_account` table per `design.md` DDL (`reseller_id`, `service_id` RESTRICT, `panel_username`, `label`, `created_by` RESTRICT, `created_at`, `archived_at`), `provider_account_tenant_idx`, partial unique `provider_account_identity_uniq(reseller_id, service_id, lower(panel_username)) WHERE archived_at IS NULL`, `provider_account_panel_username_check`, hand-added `ENABLE ROW LEVEL SECURITY`
-- [ ] 2.3 GREEN: author `drizzle/down/0008_provider_account.down.sql` — `DROP TABLE provider_account`
-- [ ] 2.4 GREEN: `src/modules/provider-accounts/infrastructure/provider-account.schema.ts` — Drizzle table definition matching 2.2
-- [ ] 2.5 RED: schema inspection test queries `information_schema.columns` for `provider_account` and fails if any column name matches `/pass|secret|credential|token|expir/` (PA: No Credential Or Lifecycle Fields Exist — the tripwire test)
-- [ ] 2.6 GREEN: confirm 2.4's column set passes the tripwire (no new column should be needed if 2.2/2.4 match the DDL exactly)
-- [ ] 2.7 RED: creating a `provider_account` persists provider, real `panel_username`, and label with no credential populated; a second Stella-TV account for the same customer is allowed (PA: Provider Account Identifies A Real Panel Login)
-- [ ] 2.8 GREEN: `domain/provider-account.ts` entity + `domain/provider-account-repository.ts` port (`create`, `listForTenant`, `findById` — all scope-filtered)
-- [ ] 2.9 GREEN: `infrastructure/drizzle-provider-account-repository.ts` + `infrastructure/in-memory-provider-account-repository.ts`
-- [ ] 2.10 RED: registering the *same* `(service, panel_username)` pair twice for one customer is rejected by the partial unique index; two different providers, or the same provider with a different username, are not
-- [ ] 2.11 GREEN: confirm 2.2's partial unique index covers this (test-driven verification, no schema change expected)
-- [ ] 2.12 RED: contract suite (both adapters) — customer B's listing excludes customer A's accounts; a reseller-scoped listing is always empty (PA: Provider Account Isolation)
-- [ ] 2.13 GREEN: `provider-account-repository.contract.test.ts` parametrized over {in-memory, PGlite}, same assertions run twice
-- [ ] 2.14 RED: a `CUSTOMER` creates an account owned by their own tenant id; the same customer cannot name a different tenant id as owner (PA: A Customer Creates Their Own Provider Account)
-- [ ] 2.15 GREEN: `application/create-provider-account.ts` — self-service path, `requireRole("CUSTOMER")` + `getScope()`, tenant id taken from scope, never from input
-- [ ] 2.16 RED: an `ADMIN` creates an account naming a target customer as owner; the account's tenant id is the customer's, not the admin's; a `RESELLER` is denied outright (PA: ADMIN May Create A Provider Account On A Customer's Behalf)
-- [ ] 2.17 GREEN: `application/admin/create-provider-account-for-customer.ts` — `requireRole("ADMIN")` → `actAsCustomer(targetUserId)` → same use case as 2.15, reusing `assertActorAuthorizedForSubject` from 1.23
-- [ ] 2.18 GREEN: `app/account/**` — customer panel shell: list owned `provider_account` rows + a create form wired to 2.15's Server Action
-- [ ] 2.19 GREEN: `app/admin/customers/[id]/**` — admin read-only view of a customer's `provider_account` rows + an on-behalf create form wired to 2.17's Server Action
-- [ ] 2.20 GREEN: `eslint.config.mjs` — add a `provider-accounts` lint zone mirroring `wallet`/`ordering` (domain forbids `drizzle-orm`, app modules forbid importing each other's entity types)
-- [ ] 2.21 Verify: `npx tsc --noEmit` and `npm run lint` pass for the full slice
+- [x] 2.1 RED: `provider_account.schema.ts` — schema inspection test fails while the table does not exist (drives the migration)
+- [x] 2.2 GREEN: author `drizzle/0008_provider_account.sql` — `provider_account` table per `design.md` DDL (`reseller_id`, `service_id` RESTRICT, `panel_username`, `label`, `created_by` RESTRICT, `created_at`, `archived_at`), `provider_account_tenant_idx`, partial unique `provider_account_identity_uniq(reseller_id, service_id, lower(panel_username)) WHERE archived_at IS NULL`, `provider_account_panel_username_check`, hand-added `ENABLE ROW LEVEL SECURITY`
+- [x] 2.3 GREEN: author `drizzle/down/0008_provider_account.down.sql` — `DROP TABLE provider_account`
+- [x] 2.4 GREEN: `src/modules/provider-accounts/infrastructure/provider-account.schema.ts` — Drizzle table definition matching 2.2
+- [x] 2.5 RED: schema inspection test queries `information_schema.columns` for `provider_account` and fails if any column name matches `/pass|secret|credential|token|expir/` (PA: No Credential Or Lifecycle Fields Exist — the tripwire test)
+- [x] 2.6 GREEN: confirm 2.4's column set passes the tripwire (no new column should be needed if 2.2/2.4 match the DDL exactly)
+- [x] 2.7 RED: creating a `provider_account` persists provider, real `panel_username`, and label with no credential populated; a second Stella-TV account for the same customer is allowed (PA: Provider Account Identifies A Real Panel Login)
+- [x] 2.8 GREEN: `domain/provider-account.ts` entity + `domain/provider-account-repository.ts` port (`create`, `listForTenant`, `findById` — all scope-filtered)
+- [x] 2.9 GREEN: `infrastructure/drizzle-provider-account-repository.ts` + `infrastructure/in-memory-provider-account-repository.ts`
+- [x] 2.10 RED: registering the *same* `(service, panel_username)` pair twice for one customer is rejected by the partial unique index; two different providers, or the same provider with a different username, are not
+- [x] 2.11 GREEN: confirm 2.2's partial unique index covers this (test-driven verification, no schema change expected)
+- [x] 2.12 RED: contract suite (both adapters) — customer B's listing excludes customer A's accounts; a reseller-scoped listing is always empty (PA: Provider Account Isolation)
+- [x] 2.13 GREEN: `provider-account-repository.contract.test.ts` parametrized over {in-memory, PGlite}, same assertions run twice
+- [x] 2.14 RED: a `CUSTOMER` creates an account owned by their own tenant id; the same customer cannot name a different tenant id as owner (PA: A Customer Creates Their Own Provider Account)
+- [x] 2.15 GREEN: `application/create-provider-account.ts` — self-service path, `requireRole("CUSTOMER")` + `getScope()`, tenant id taken from scope, never from input
+- [x] 2.16 RED: an `ADMIN` creates an account naming a target customer as owner; the account's tenant id is the customer's, not the admin's; a `RESELLER` is denied outright (PA: ADMIN May Create A Provider Account On A Customer's Behalf)
+- [x] 2.17 GREEN: `application/admin/create-provider-account-for-customer.ts` — `requireRole("ADMIN")` → `actAsCustomer(targetUserId)` → same use case as 2.15, reusing `assertActorAuthorizedForSubject` from 1.23
+- [x] 2.18 GREEN: `app/account/**` — customer panel shell: list owned `provider_account` rows + a create form wired to 2.15's Server Action
+- [x] 2.19 GREEN: `app/admin/customers/[id]/**` — admin read-only view of a customer's `provider_account` rows + an on-behalf create form wired to 2.17's Server Action
+- [x] 2.20 GREEN: `eslint.config.mjs` — add a `provider-accounts` lint zone mirroring `wallet`/`ordering` (domain forbids `drizzle-orm`, app modules forbid importing each other's entity types)
+- [x] 2.21 Verify: `npx tsc --noEmit` and `npm run lint` pass for the full slice
 
 ## Phase 3: Purchase Seam (PR3, ~730 lines)
 

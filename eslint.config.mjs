@@ -234,6 +234,40 @@ const eslintConfig = defineConfig([
       "no-restricted-imports": ["error", { paths: [...noMintersOutsideDal.paths] }],
     },
   },
+  // Provider-accounts gets the same guards as wallet (design.md "Decision:
+  // provider-accounts is its own module"). `domain/` bars Drizzle plus
+  // catalog's and identity's entity types; `infrastructure/` legitimately
+  // references catalog's and identity's SCHEMAS (the `service_id` and
+  // `created_by` foreign keys) via relative imports, which these `@/`-alias
+  // patterns do not match at all — entity types stay barred everywhere else.
+  {
+    files: ["src/modules/provider-accounts/domain/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noDrizzleInDomain.paths, ...noMintersOutsideDal.paths],
+          patterns: [
+            ...noDrizzleInDomain.patterns,
+            ...noIdentityEntityImport.patterns,
+            ...noCatalogEntityImport.patterns,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/modules/provider-accounts/{application,infrastructure}/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noMintersOutsideDal.paths],
+          patterns: [...noCatalogEntityImport.patterns],
+        },
+      ],
+    },
+  },
   // Test files are the second sanctioned AccessScope minting site: the
   // minters' "dal.ts only" seal protects PRODUCTION code paths from forging
   // scopes, but the isolation contract suite (4.8) and the reseller-surface
