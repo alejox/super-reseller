@@ -10,7 +10,13 @@ type EnrichedAccount = InventoryAccountRow & {
   assignedUser: any;
 };
 
-export function AccountInventoryClient({ accounts }: { accounts: EnrichedAccount[] }) {
+export function AccountInventoryClient({ 
+  accounts,
+  services
+}: { 
+  accounts: EnrichedAccount[];
+  services: readonly { id: string; name: string }[];
+}) {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({});
 
   const togglePassword = (id: string) => {
@@ -25,7 +31,7 @@ export function AccountInventoryClient({ accounts }: { accounts: EnrichedAccount
           <h2 className="text-4xl font-bold text-[#dae2fd]">Account Inventory</h2>
           <p className="text-lg text-[#cbc3d7] mt-2">Manage your streaming service stock and assigned accounts.</p>
         </div>
-        <InventoryActions />
+        <InventoryActions services={services} />
       </div>
 
       {/* Stock Overview Bento Grid */}
