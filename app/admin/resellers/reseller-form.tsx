@@ -1,11 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-
 import { createResellerAction, topUpResellerAction } from "./actions";
-
-const FIELD_CLASS =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100";
 
 export type TierOption = Readonly<{ id: string; code: string; name: string }>;
 
@@ -27,55 +23,63 @@ export function CreateResellerForm({ tiers }: Readonly<{ tiers: readonly TierOpt
   }, [state, pending]);
 
   return (
-    <form action={action} className="mt-6 space-y-3 border-t border-zinc-200 pt-6" ref={formRef}>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Correo electrónico</span>
+    <form
+      action={action}
+      className="space-y-6"
+      ref={formRef}
+    >
+      <div className="grid gap-6 sm:grid-cols-3">
+        <div>
+          <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5 uppercase tracking-wider">Correo electrónico</label>
           <input
             autoComplete="off"
-            className={FIELD_CLASS}
+            className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2.5 px-4 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors placeholder-[#958ea0]"
             name="email"
             placeholder="juan@ejemplo.com"
             required
             type="email"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Contraseña inicial</span>
+        </div>
+        <div>
+          <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5 uppercase tracking-wider">Contraseña inicial</label>
           <input
             autoComplete="new-password"
-            className={FIELD_CLASS}
+            className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2.5 px-4 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors placeholder-[#958ea0] font-mono"
             name="password"
             placeholder="Mínimo 10 caracteres"
             required
             type="password"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Nivel de precio</span>
-          <select className={FIELD_CLASS} name="priceTierId" required>
+        </div>
+        <div>
+          <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5 uppercase tracking-wider">Nivel de precio</label>
+          <select 
+            className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2.5 px-4 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors appearance-none cursor-pointer" 
+            name="priceTierId" 
+            required
+          >
             {tiers.map((tier) => (
               <option key={tier.id} value={tier.id}>
                 {tier.code} · {tier.name}
               </option>
             ))}
           </select>
-        </label>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <button
-          className="inline-flex items-center justify-center rounded-lg bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-          disabled={pending}
+      <div className="flex items-center gap-4">
+        <button 
+          className="bg-gradient-to-r from-[#d0bcff] to-[#a078ff] text-[#3c0091] hover:opacity-90 transition-opacity px-6 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider disabled:opacity-50 shadow-[0_4px_14px_0_rgba(139,92,246,0.39)]" 
+          disabled={pending} 
           type="submit"
         >
           {pending ? "Creando…" : "Crear revendedor"}
         </button>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-[#cbc3d7]">
           Entregue la contraseña por un canal seguro; no vuelve a mostrarse.
         </p>
       </div>
       {state !== undefined && (
-        <p className="text-sm font-medium text-red-600" role="alert">
+        <p className="text-sm font-medium text-[#ffb4ab]" role="alert">
           {state.error}
         </p>
       )}
@@ -101,34 +105,34 @@ export function TopUpForm({ resellerId }: Readonly<{ resellerId: string }>) {
   return (
     <form action={action} className="flex flex-col gap-1" ref={formRef}>
       <input name="resellerId" type="hidden" value={resellerId} />
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <input
           aria-label="Monto a recargar"
-          className="w-28 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-950 focus:border-emerald-500 focus:outline-none"
+          className="w-24 bg-[#0b1326] border border-[#494454] rounded-md py-1.5 px-3 text-[#dae2fd] text-xs focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors placeholder-[#958ea0] font-mono text-center"
           inputMode="numeric"
           min="1"
           name="amountMinor"
-          placeholder="50000"
+          placeholder="$50"
           step="1"
           type="number"
         />
         <input
           aria-label="Referencia"
-          className="w-32 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-950 focus:border-emerald-500 focus:outline-none"
+          className="w-32 bg-[#0b1326] border border-[#494454] rounded-md py-1.5 px-3 text-[#dae2fd] text-xs focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors placeholder-[#958ea0]"
           name="memo"
-          placeholder="Referencia"
+          placeholder="Ref..."
           type="text"
         />
         <button
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-semibold text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:text-zinc-400"
+          className="px-3 py-1.5 rounded-md bg-[#222a3d] border border-[#494454] text-[#dae2fd] hover:bg-[#31394d] transition-colors text-[10px] font-bold uppercase tracking-wider disabled:opacity-50"
           disabled={pending}
           type="submit"
         >
-          {pending ? "…" : "Recargar"}
+          {pending ? "…" : "TopUp"}
         </button>
       </div>
       {state !== undefined && (
-        <p className="text-sm font-medium text-red-600" role="alert">
+        <p className="text-xs font-medium text-[#ffb4ab]" role="alert">
           {state.error}
         </p>
       )}

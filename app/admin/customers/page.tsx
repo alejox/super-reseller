@@ -9,13 +9,13 @@ export default function AdminCustomersPage() {
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8 sm:py-12">
       <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-400">
           Clientes
         </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">
+        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl dark:text-zinc-50">
           Gestión de clientes
         </h1>
-        <p className="max-w-2xl text-zinc-600">
+        <p className="max-w-2xl text-zinc-600 dark:text-zinc-400">
           Dé de alta cuentas de cliente y asígnelas al nivel de precio que corresponda.
         </p>
       </header>

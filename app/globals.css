@@ -27,3 +27,53 @@ body {
      which silently discarded the font the app pays to load. */
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+@theme {
+  --color-outline: #958ea0;
+  --color-on-surface: #dae2fd;
+  --color-background: #0b1326;
+  --color-surface-dim: #0b1326;
+  --color-on-primary-container: #340080;
+  --color-primary-fixed: #e9ddff;
+  --color-tertiary-fixed: #acedff;
+  --color-secondary-fixed: #e3dfff;
+  --color-on-secondary-fixed-variant: #444173;
+  --color-surface-container-high: #222a3d;
+  --color-secondary: #c4c1fb;
+  --color-inverse-on-surface: #283044;
+  --color-primary-fixed-dim: #d0bcff;
+  --color-on-error: #690005;
+  --color-on-primary-fixed-variant: #5516be;
+  --color-surface-container: #171f33;
+  --color-tertiary-fixed-dim: #4cd7f6;
+  --color-error: #ffb4ab;
+  --color-on-tertiary-fixed-variant: #004e5c;
+  --color-outline-variant: #494454;
+  --color-on-surface-variant: #cbc3d7;
+  --color-on-secondary-fixed: #181445;
+  --color-on-primary: #3c0091;
+  --color-on-tertiary: #003640;
+  --color-on-secondary-container: #b3afe9;
+  --color-primary: #d0bcff;
+  --color-on-error-container: #ffdad6;
+  --color-inverse-primary: #6d3bd7;
+  --color-surface-bright: #31394d;
+  --color-inverse-surface: #dae2fd;
+  --color-on-background: #dae2fd;
+  --color-secondary-container: #444173;
+  --color-surface-container-highest: #2d3449;
+  --color-surface: #0b1326;
+  --color-surface-container-low: #131b2e;
+  --color-surface-variant: #2d3449;
+  --color-on-primary-fixed: #23005c;
+  --color-on-secondary: #2d2a5b;
+  --color-on-tertiary-container: #002f38;
+  --color-secondary-fixed-dim: #c4c1fb;
+  --color-primary-container: #a078ff;
+  --color-surface-tint: #d0bcff;
+  --color-on-tertiary-fixed: #001f26;
+  --color-tertiary: #4cd7f6;
+  --color-error-container: #93000a;
+  --color-surface-container-lowest: #060e20;
+  --color-tertiary-container: #009eb9;
+}

@@ -3,16 +3,13 @@ import { formatMoney, money } from "@/shared/money/money";
 
 import { adminResellerDeps } from "./admin-resellers";
 import { CreateResellerForm, TopUpForm } from "./reseller-form";
+import { Copy, CreditCardIcon } from "lucide-react";
 
 /**
  * The dynamic half of the resellers screen: it reads the session and the
  * database, so it renders behind a Suspense boundary while the page shell
  * prerenders (`cacheComponents: true`).
  */
-
-const SECTION_CLASS = "rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8";
-const TH_CLASS = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500";
-const TD_CLASS = "px-3 py-2 text-sm text-zinc-800";
 
 export async function ResellersWorkspace() {
   const deps = await adminResellerDeps();
@@ -35,48 +32,52 @@ export async function ResellersWorkspace() {
   const tierByeId = new Map(tiers.map((tier) => [tier.id, tier]));
 
   return (
-    <section aria-labelledby="resellers-heading" className={SECTION_CLASS}>
-      <h2 className="text-lg font-semibold text-zinc-950" id="resellers-heading">
-        Cuentas de revendedor
-      </h2>
-      <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
-        Cada cuenta queda fijada a un nivel de precio. Ese nivel decide todos los precios que ve,
-        y no puede elegir otro.
-      </p>
+    <div className="bg-[#171f33] border border-[#494454] rounded-xl flex flex-col overflow-hidden shadow-sm" aria-labelledby="resellers-heading">
+      <div className="p-6 border-b border-[#494454]">
+        <h2 className="text-xl font-semibold text-[#dae2fd]" id="resellers-heading">
+          Cuentas de Revendedor
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-[#cbc3d7]">
+          Cada cuenta queda fijada a un nivel de precio. Ese nivel decide todos los precios que ve,
+          y no puede elegir otro.
+        </p>
+      </div>
 
-      <div className="mt-4">
+      <div>
         {resellers.length === 0 ? (
-          <p className="rounded-lg bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
+          <div className="p-12 text-center text-sm text-[#cbc3d7]">
             Todavía no hay revendedores.
-          </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-lg border-collapse">
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="border-b border-zinc-200">
-                  <th className={TH_CLASS} scope="col">Correo electrónico</th>
-                  <th className={TH_CLASS} scope="col">Nivel</th>
-                  <th className={TH_CLASS} scope="col">Saldo</th>
-                  <th className={TH_CLASS} scope="col">Recargar</th>
-                  <th className={TH_CLASS} scope="col">Estado</th>
+                <tr className="bg-[#2d3449] border-b border-[#494454]">
+                  <th className="p-4 text-xs font-semibold text-[#cbc3d7] uppercase tracking-wider">Correo electrónico</th>
+                  <th className="p-4 text-xs font-semibold text-[#cbc3d7] uppercase tracking-wider">Nivel</th>
+                  <th className="p-4 text-xs font-semibold text-[#cbc3d7] uppercase tracking-wider text-right">Saldo</th>
+                  <th className="p-4 text-xs font-semibold text-[#cbc3d7] uppercase tracking-wider text-center">Recargar</th>
+                  <th className="p-4 text-xs font-semibold text-[#cbc3d7] uppercase tracking-wider text-center">Estado</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-sm text-[#dae2fd] divide-y divide-[#494454]/50">
                 {resellers.map((reseller) => {
                   const tier = reseller.priceTierId
                     ? tierByeId.get(reseller.priceTierId)
                     : undefined;
                   return (
-                    <tr className="border-b border-zinc-100 last:border-b-0" key={reseller.id}>
-                      <td className={`${TD_CLASS} font-medium text-zinc-950`}>{reseller.email}</td>
-                      <td className={TD_CLASS}>
-                        {tier ? `${tier.code} · ${tier.name}` : "—"}
+                    <tr key={reseller.id} className="hover:bg-[#2d3449]/50 transition-colors">
+                      <td className="p-4 font-medium text-[#dae2fd]">
+                        {reseller.email}
                       </td>
-                      <td className={`${TD_CLASS} font-semibold`}>
-                        {/* A reseller with no movements has no row in the
-                            ledger at all, and that is a zero balance rather
-                            than a missing one — there is no wallet record to
-                            create, so nothing can fall out of sync. */}
+                      <td className="p-4 text-[#cbc3d7]">
+                        {tier ? (
+                          <span className="inline-block px-2 py-1 rounded bg-[#222a3d] border border-[#494454] text-[11px] font-bold tracking-wider">
+                            {tier.code} · {tier.name}
+                          </span>
+                        ) : "—"}
+                      </td>
+                      <td className="p-4 text-right font-semibold text-[#4cd7f6]">
                         {formatMoney(
                           money(
                             reseller.resellerId ? (balances.get(reseller.resellerId) ?? 0) : 0,
@@ -85,11 +86,19 @@ export async function ResellersWorkspace() {
                           "es-CO",
                         )}
                       </td>
-                      <td className={TD_CLASS}>
+                      <td className="p-4 text-center flex justify-center">
                         {reseller.resellerId ? <TopUpForm resellerId={reseller.resellerId} /> : "—"}
                       </td>
-                      <td className={TD_CLASS}>
-                        {reseller.deactivatedAt === null ? "Activo" : "Desactivado"}
+                      <td className="p-4 text-center">
+                        {reseller.deactivatedAt === null ? (
+                          <span className="inline-block px-2 py-1 rounded bg-[#009eb9]/20 text-[#4cd7f6] border border-[#4cd7f6]/30 text-[10px] uppercase font-bold tracking-wider">
+                            Activo
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-1 rounded bg-[#93000a]/20 text-[#ffb4ab] border border-[#ffb4ab]/30 text-[10px] uppercase font-bold tracking-wider">
+                            Desactivado
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -100,28 +109,27 @@ export async function ResellersWorkspace() {
         )}
       </div>
 
-      {tiers.length === 0 ? (
-        <p className="mt-6 rounded-lg bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
-          {/* `users_reseller_requires_tier` makes a tier-less RESELLER
-              unrepresentable, so the form cannot be offered before a tier
-              exists — it could only ever be rejected. */}
-          Cree un nivel de precio antes de dar de alta revendedores.
-        </p>
-      ) : (
-        <CreateResellerForm
-          tiers={tiers.map((tier) => ({ id: tier.id, code: tier.code, name: tier.name }))}
-        />
-      )}
-    </section>
+      <div className="p-6 border-t border-[#494454] bg-[#0b1326]/50">
+        {tiers.length === 0 ? (
+          <p className="text-center text-sm text-[#cbc3d7]">
+            Cree un nivel de precio antes de dar de alta revendedores.
+          </p>
+        ) : (
+          <CreateResellerForm
+            tiers={tiers.map((tier) => ({ id: tier.id, code: tier.code, name: tier.name }))}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
 export function ResellersWorkspaceFallback() {
   return (
-    <div className={`${SECTION_CLASS} animate-pulse`}>
-      <div className="h-5 w-56 rounded bg-zinc-200" />
-      <div className="mt-3 h-4 w-full max-w-md rounded bg-zinc-100" />
-      <div className="mt-6 h-24 rounded bg-zinc-50" />
+    <div className="bg-[#171f33] border border-[#494454] rounded-xl flex flex-col overflow-hidden animate-pulse p-6">
+      <div className="h-5 w-56 rounded bg-[#2d3449]" />
+      <div className="mt-3 h-4 w-full max-w-md rounded bg-[#222a3d]" />
+      <div className="mt-6 h-24 rounded bg-[#0b1326]" />
     </div>
   );
 }

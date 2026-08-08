@@ -4,6 +4,8 @@ import { useActionState } from "react";
 
 import { purchaseAction } from "./actions";
 
+import { buttonVariants } from "@/app/_components/ui/button";
+
 /**
  * One form per duration row — mirrors `app/panel/buy-button.tsx`. The price
  * is never a field here: it is resolved server-side from the plan id at the
@@ -21,14 +23,14 @@ export function PurchaseBuyButton({
       <input name="planId" type="hidden" value={planId} />
       <input name="providerAccountId" type="hidden" value={providerAccountId} />
       <button
-        className="rounded-md bg-emerald-700 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+        className={buttonVariants({ variant: "primary", size: "sm" })}
         disabled={pending}
         type="submit"
       >
         {pending ? "Comprando…" : "Comprar"}
       </button>
       {state !== undefined && (
-        <p className="mt-1 max-w-xs text-xs font-medium text-red-600" role="alert">
+        <p className="mt-1 max-w-xs text-xs font-medium text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       )}

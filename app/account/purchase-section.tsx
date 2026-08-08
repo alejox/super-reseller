@@ -4,6 +4,8 @@ import { formatMoney } from "@/shared/money/money";
 
 import { PurchaseBuyButton } from "./purchase-buy-button";
 
+import { Table, Td, Th, Tr } from "@/app/_components/ui/table";
+
 /**
  * CP: Purchase Flow Opens On Account Creation When Empty — this section is
  * rendered only when `accounts` is non-empty; `AccountWorkspace` decides
@@ -25,9 +27,6 @@ function durationLabel(days: number): string {
   return DURATION_LABELS[days] ?? `${days} días`;
 }
 
-const TH_CLASS = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500";
-const TD_CLASS = "px-3 py-2 text-sm text-zinc-800";
-
 export function PurchaseSection({
   accounts,
   sellablePlans,
@@ -36,10 +35,12 @@ export function PurchaseSection({
   sellablePlans: readonly SellablePlanListing[];
 }>) {
   return (
-    <div className="mt-8 space-y-6 border-t border-zinc-200 pt-6">
+    <div className="mt-8 space-y-6 border-t border-zinc-200 pt-6 dark:border-zinc-800">
       <div>
-        <h2 className="text-lg font-semibold text-zinc-950">Comprar o recargar</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50">
+          Comprar o recargar
+        </h2>
+        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Elija la duración para la cuenta que quiere recargar. El precio es el de su lista.
         </p>
       </div>
@@ -55,41 +56,37 @@ export function PurchaseSection({
 
         return (
           <section key={account.id}>
-            <h3 className="text-sm font-semibold text-zinc-900">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {serviceName} — {account.label ?? account.panelUsername}
             </h3>
             {durations.length === 0 ? (
-              <p className="mt-2 text-xs text-zinc-500">
+              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
                 No hay duraciones disponibles para este servicio en su lista de precios.
               </p>
             ) : (
-              <div className="mt-3 overflow-x-auto">
-                <table className="w-full min-w-md border-collapse">
+              <div className="mt-3">
+                <Table>
                   <thead>
-                    <tr className="border-b border-zinc-200">
-                      <th className={TH_CLASS} scope="col">Duración</th>
-                      <th className={TH_CLASS} scope="col">Precio</th>
-                      <th className={TH_CLASS} scope="col">
+                    <Tr head>
+                      <Th scope="col">Duración</Th>
+                      <Th scope="col">Precio</Th>
+                      <Th scope="col">
                         <span className="sr-only">Comprar</span>
-                      </th>
-                    </tr>
+                      </Th>
+                    </Tr>
                   </thead>
                   <tbody>
                     {durations.map((entry) => (
-                      <tr className="border-b border-zinc-100 last:border-b-0" key={entry.plan.id}>
-                        <td className={`${TD_CLASS} font-medium`}>
-                          {durationLabel(entry.plan.durationDays)}
-                        </td>
-                        <td className={`${TD_CLASS} font-semibold`}>
-                          {formatMoney(entry.price, "es-CO")}
-                        </td>
-                        <td className={TD_CLASS}>
+                      <Tr key={entry.plan.id}>
+                        <Td className="font-medium">{durationLabel(entry.plan.durationDays)}</Td>
+                        <Td className="font-semibold">{formatMoney(entry.price, "es-CO")}</Td>
+                        <Td>
                           <PurchaseBuyButton planId={entry.plan.id} providerAccountId={account.id} />
-                        </td>
-                      </tr>
+                        </Td>
+                      </Tr>
                     ))}
                   </tbody>
-                </table>
+                </Table>
               </div>
             )}
           </section>

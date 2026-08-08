@@ -2,16 +2,15 @@ import { accountDeps } from "./account-deps";
 import { CreateProviderAccountForm } from "./provider-account-form";
 import { PurchaseSection } from "./purchase-section";
 
+import { CARD_CLASS, Card } from "@/app/_components/ui/card";
+import { Table, Td, Th, Tr } from "@/app/_components/ui/table";
+
 /**
  * The dynamic half of the customer panel — mirrors
  * `app/admin/customers/customers-workspace.tsx`'s `CustomersWorkspace`.
  * List + create only, like the customers screen: PA scope is provider
  * accounts, not orders (that seam belongs to `payment-gateway`/PR3).
  */
-
-const SECTION_CLASS = "rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8";
-const TH_CLASS = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500";
-const TD_CLASS = "px-3 py-2 text-sm text-zinc-800";
 
 export async function AccountWorkspace() {
   const deps = await accountDeps();
@@ -35,47 +34,45 @@ export async function AccountWorkspace() {
   const serviceNameById = new Map(services.map((service) => [service.id, service.name]));
 
   return (
-    <section aria-labelledby="account-heading" className={SECTION_CLASS}>
-      <h2 className="text-lg font-semibold text-zinc-950" id="account-heading">
+    <Card as="section" aria-labelledby="account-heading">
+      <h2 className="text-lg font-semibold text-zinc-950 dark:text-zinc-50" id="account-heading">
         Mis cuentas de proveedor
       </h2>
-      <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600">
+      <p className="mt-1 max-w-2xl text-sm leading-6 text-zinc-600 dark:text-zinc-400">
         Registre el usuario real que usa en cada servicio. No solicitamos contraseñas.
       </p>
 
       <div className="mt-4">
         {accounts.length === 0 ? (
-          <p className="rounded-lg bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
+          <p className="rounded-lg bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500 dark:bg-zinc-800/60 dark:text-zinc-400">
             Todavía no tiene cuentas registradas.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-lg border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-200">
-                  <th className={TH_CLASS} scope="col">Servicio</th>
-                  <th className={TH_CLASS} scope="col">Usuario</th>
-                  <th className={TH_CLASS} scope="col">Etiqueta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map((account) => (
-                  <tr className="border-b border-zinc-100 last:border-b-0" key={account.id}>
-                    <td className={`${TD_CLASS} font-medium text-zinc-950`}>
-                      {serviceNameById.get(account.serviceId) ?? account.serviceId}
-                    </td>
-                    <td className={TD_CLASS}>{account.panelUsername}</td>
-                    <td className={TD_CLASS}>{account.label ?? "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table minWidth="lg">
+            <thead>
+              <Tr head>
+                <Th scope="col">Servicio</Th>
+                <Th scope="col">Usuario</Th>
+                <Th scope="col">Etiqueta</Th>
+              </Tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <Tr key={account.id}>
+                  <Td className="font-medium text-zinc-950 dark:text-zinc-50">
+                    {serviceNameById.get(account.serviceId) ?? account.serviceId}
+                  </Td>
+                  <Td>{account.panelUsername}</Td>
+                  <Td>{account.label ?? "—"}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
         )}
       </div>
 
       {services.length === 0 ? (
-        <p className="mt-6 rounded-lg bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500">
+        <p className="mt-6 rounded-lg bg-zinc-50 px-4 py-6 text-center text-sm text-zinc-500 dark:bg-zinc-800/60 dark:text-zinc-400">
           Todavía no hay servicios disponibles en su lista de precios.
         </p>
       ) : (
@@ -88,16 +85,16 @@ export async function AccountWorkspace() {
       {accounts.length > 0 && (
         <PurchaseSection accounts={accounts} sellablePlans={sellablePlans} />
       )}
-    </section>
+    </Card>
   );
 }
 
 export function AccountWorkspaceFallback() {
   return (
-    <div className={`${SECTION_CLASS} animate-pulse`}>
-      <div className="h-5 w-56 rounded bg-zinc-200" />
-      <div className="mt-3 h-4 w-full max-w-md rounded bg-zinc-100" />
-      <div className="mt-6 h-24 rounded bg-zinc-50" />
+    <div className={`${CARD_CLASS} animate-pulse`}>
+      <div className="h-5 w-56 rounded bg-zinc-200 dark:bg-zinc-800" />
+      <div className="mt-3 h-4 w-full max-w-md rounded bg-zinc-100 dark:bg-zinc-800/60" />
+      <div className="mt-6 h-24 rounded bg-zinc-50 dark:bg-zinc-800/40" />
     </div>
   );
 }

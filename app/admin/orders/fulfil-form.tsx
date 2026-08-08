@@ -4,6 +4,9 @@ import { useActionState } from "react";
 
 import { fulfilOrderAction } from "./actions";
 
+import { buttonVariants } from "@/app/_components/ui/button";
+import { COMPACT_FIELD_CLASS } from "@/app/_components/ui/field";
+
 export function FulfilForm({ orderId }: Readonly<{ orderId: string }>) {
   const [state, action, pending] = useActionState(fulfilOrderAction, undefined);
 
@@ -13,13 +16,13 @@ export function FulfilForm({ orderId }: Readonly<{ orderId: string }>) {
       <div className="flex items-center gap-1">
         <input
           aria-label="Nota de entrega"
-          className="w-40 rounded-md border border-zinc-300 bg-white px-2 py-1 text-sm text-zinc-950 focus:border-emerald-500 focus:outline-none"
+          className={`w-40 ${COMPACT_FIELD_CLASS}`}
           name="note"
           placeholder="Referencia de entrega"
           type="text"
         />
         <button
-          className="rounded-md bg-zinc-950 px-2 py-1 text-xs font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+          className={buttonVariants({ variant: "secondary", size: "sm" })}
           disabled={pending}
           type="submit"
         >
@@ -27,7 +30,7 @@ export function FulfilForm({ orderId }: Readonly<{ orderId: string }>) {
         </button>
       </div>
       {state !== undefined && (
-        <p className="text-sm font-medium text-red-600" role="alert">
+        <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       )}

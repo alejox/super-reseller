@@ -4,8 +4,8 @@ import { useActionState, useEffect, useRef } from "react";
 
 import { createProviderAccountForCustomerAction } from "./actions";
 
-const FIELD_CLASS =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100";
+import { buttonVariants } from "@/app/_components/ui/button";
+import { Field, FIELD_CLASS } from "@/app/_components/ui/field";
 
 export type ServiceOption = Readonly<{ id: string; name: string }>;
 
@@ -33,11 +33,14 @@ export function CreateProviderAccountOnBehalfForm({
   }, [state, pending]);
 
   return (
-    <form action={action} className="mt-6 space-y-3 border-t border-zinc-200 pt-6" ref={formRef}>
+    <form
+      action={action}
+      className="mt-6 space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
+      ref={formRef}
+    >
       <input name="targetUserId" type="hidden" value={targetUserId} />
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Servicio</span>
+        <Field label="Servicio">
           <select className={FIELD_CLASS} name="serviceId" required>
             {services.map((service) => (
               <option key={service.id} value={service.id}>
@@ -45,9 +48,8 @@ export function CreateProviderAccountOnBehalfForm({
               </option>
             ))}
           </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Usuario en el panel</span>
+        </Field>
+        <Field label="Usuario en el panel">
           <input
             autoComplete="off"
             className={FIELD_CLASS}
@@ -56,9 +58,8 @@ export function CreateProviderAccountOnBehalfForm({
             required
             type="text"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Etiqueta (opcional)</span>
+        </Field>
+        <Field label="Etiqueta (opcional)">
           <input
             autoComplete="off"
             className={FIELD_CLASS}
@@ -66,20 +67,18 @@ export function CreateProviderAccountOnBehalfForm({
             placeholder="Cuenta principal"
             type="text"
           />
-        </label>
+        </Field>
       </div>
       <div className="flex items-center gap-3">
-        <button
-          className="inline-flex items-center justify-center rounded-lg bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-          disabled={pending}
-          type="submit"
-        >
+        <button className={buttonVariants()} disabled={pending} type="submit">
           {pending ? "Agregando…" : "Agregar cuenta"}
         </button>
-        <p className="text-xs text-zinc-500">Creación de soporte, a nombre del cliente.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
+          Creación de soporte, a nombre del cliente.
+        </p>
       </div>
       {state !== undefined && (
-        <p className="text-sm font-medium text-red-600" role="alert">
+        <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       )}

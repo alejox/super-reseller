@@ -4,32 +4,12 @@ import { walletBalance } from "@/modules/wallet/domain/wallet-entry";
 import { DrizzleWalletRepository } from "@/modules/wallet/infrastructure/drizzle-wallet-repository";
 import { formatMoney } from "@/shared/money/money";
 import { getDb } from "@/shared/db/client";
-
-/**
- * The reseller's balance and statement.
- *
- * The balance is SUMMED from the movements shown right below it, by the same
- * `walletBalance` the tests pin — so the headline figure and the list can
- * never disagree. There is no stored balance to drift from them.
- */
-
-const KIND_LABELS: Readonly<Record<string, string>> = {
-  TOPUP: "Recarga",
-  ADJUSTMENT: "Ajuste",
-  ORDER_DEBIT: "Compra",
-};
-
-const TH_CLASS = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500";
-const TD_CLASS = "px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200";
-
-const dateFormat = new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" });
+import { PlusCircle } from "lucide-react";
 
 export async function ResellerWallet() {
   const scope = await getScope();
 
   if (scope.kind !== "reseller") {
-    // Narrowed BEFORE the repository is built, for the same reason the
-    // catalog view narrows first: an ADMIN has no wallet of their own.
     return null;
   }
 
@@ -38,62 +18,16 @@ export async function ResellerWallet() {
   const balance = walletBalance(entries, WALLET_CURRENCY);
 
   return (
-    <section aria-labelledby="wallet-heading" className="space-y-4">
-      <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100" id="wallet-heading">
-        Saldo
-      </h2>
-
-      <p className="text-3xl font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">
-        {formatMoney(balance, "es-CO")}
-      </p>
-
-      {entries.length === 0 ? (
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Todavía no hay movimientos. El administrador registra las recargas.
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-md border-collapse">
-            <thead>
-              <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                <th className={TH_CLASS} scope="col">Fecha</th>
-                <th className={TH_CLASS} scope="col">Concepto</th>
-                <th className={TH_CLASS} scope="col">Referencia</th>
-                <th className={TH_CLASS} scope="col">Monto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((entry) => (
-                <tr
-                  className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800"
-                  key={entry.id}
-                >
-                  <td className={TD_CLASS}>{dateFormat.format(entry.createdAt)}</td>
-                  <td className={TD_CLASS}>{KIND_LABELS[entry.kind] ?? entry.kind}</td>
-                  <td className={TD_CLASS}>{entry.memo ?? "—"}</td>
-                  <td
-                    className={`${TD_CLASS} font-semibold ${
-                      entry.amountMinor < 0
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-emerald-700 dark:text-emerald-400"
-                    }`}
-                  >
-                    {/* The sign is spelled out rather than left to the
-                        formatter: on a statement, "did this add or remove
-                        money" is the first thing read and the worst thing to
-                        get wrong. */}
-                    {entry.amountMinor > 0 ? "+" : "−"}
-                    {formatMoney(
-                      { amountMinor: Math.abs(entry.amountMinor), currency: entry.currency },
-                      "es-CO",
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
+    <div className="bg-[#222a3d] rounded-xl p-6 flex items-center gap-8 border border-[#494454] border-t-white/10 w-full md:w-auto">
+      <div>
+        <p className="text-xs font-semibold text-[#cbc3d7] uppercase tracking-wider mb-1">Current Balance</p>
+        <p className="text-5xl text-[#e9ddff] font-bold">{formatMoney(balance, "es-CO")}</p>
+      </div>
+      <div className="h-12 w-px bg-[#494454] hidden md:block"></div>
+      <button className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#d0bcff] to-[#a078ff] text-[#3c0091] rounded-lg text-xs font-bold shadow-[0_0_15px_2px_rgba(139,92,246,0.3)] hover:opacity-90 transition-all active:scale-95 ml-auto md:ml-0">
+        <PlusCircle className="h-5 w-5" />
+        Recharge
+      </button>
+    </div>
   );
 }

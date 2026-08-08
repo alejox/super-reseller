@@ -2,60 +2,23 @@ import type { SellablePlanListing } from "@/modules/catalog/domain/catalog-repos
 import { getScope, verifySession } from "@/modules/identity/application/dal";
 import { createDrizzleScopedCatalogRepositoryFactory } from "@/modules/identity/infrastructure/repository-factory";
 import { formatMoney } from "@/shared/money/money";
-
+import { Store, Flame } from "lucide-react";
 import { BuyButton } from "./buy-button";
 import { getDb } from "@/shared/db/client";
 
-/**
- * The reseller's catalog.
- *
- * There is no tier parameter anywhere in this file, and there cannot be: the
- * factory hands a RESELLER scope a repository already bound to that scope's
- * tier, on a type that has no method taking one. "Show me another tier's
- * prices" is not a question this page is able to ask.
- */
-
 const PLAN_KIND_LABELS: Readonly<Record<string, string>> = {
   SCREEN: "Pantalla",
-  FULL_ACCOUNT: "Cuenta completa",
+  FULL_ACCOUNT: "Cuenta",
 };
-
-const TH_CLASS = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500";
-const TD_CLASS = "px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200";
-
-function groupByService(
-  plans: readonly SellablePlanListing[],
-): readonly (readonly [string, readonly SellablePlanListing[]])[] {
-  const groups = new Map<string, SellablePlanListing[]>();
-  for (const entry of plans) {
-    const forService = groups.get(entry.serviceName) ?? [];
-    forService.push(entry);
-    groups.set(entry.serviceName, forService);
-  }
-
-  return [...groups.entries()]
-    .map(([name, entries]) => {
-      const sorted = [...entries].sort(
-        (a, b) => a.plan.durationDays - b.plan.durationDays,
-      );
-      return [name, sorted] as const;
-    })
-    .sort((a, b) => a[0].localeCompare(b[0], "es"));
-}
 
 export async function ResellerCatalog() {
   const session = await verifySession();
   const scope = await getScope();
 
-  // The narrowing has to happen BEFORE `.for(scope)`, not after: the factory's
-  // return type is conditional on the scope's kind, so calling it with the
-  // un-narrowed union yields a union of both surfaces on which neither
-  // surface's methods exist. Narrowing first is what selects the reseller
-  // repository — and with it, the tier binding.
   if (scope.kind !== "reseller") {
     return (
-      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Esta vista es para cuentas de revendedor. Su cuenta es de administración.
+      <p className="text-sm text-[#958ea0]">
+        Esta vista es para cuentas de revendedor.
       </p>
     );
   }
@@ -65,66 +28,62 @@ export async function ResellerCatalog() {
 
   if (plans.length === 0) {
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">
+      <div className="rounded-xl border border-[#494454] bg-[#171f33] p-6 text-center">
+        <p className="text-sm text-[#cbc3d7]">
           Todavía no hay planes disponibles para su lista de precios.
-        </p>
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          {/* The honest explanation of an empty catalog: a plan without a
-              current price at THIS tier is not sellable, and the join that
-              builds this list drops it rather than showing another tier's
-              price (CAT: Missing Tier Price Blocks Sale). */}
-          Un plan sin precio asignado a su lista no aparece aquí.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-8">
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Precios de su lista asignada ({session.priceTierId ? "activa" : "sin asignar"}).
-      </p>
-      {groupByService(plans).map(([serviceName, entries]) => (
-        <section key={serviceName}>
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{serviceName}</h2>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-md border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-800">
-                  <th className={TH_CLASS} scope="col">Plan</th>
-                  <th className={TH_CLASS} scope="col">Tipo</th>
-                  <th className={TH_CLASS} scope="col">Duración</th>
-                  <th className={TH_CLASS} scope="col">Precio</th>
-                  <th className={TH_CLASS} scope="col">
-                    <span className="sr-only">Comprar</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr
-                    className="border-b border-zinc-100 last:border-b-0 dark:border-zinc-800"
-                    key={entry.plan.id}
-                  >
-                    <td className={`${TD_CLASS} font-medium`}>{entry.plan.name}</td>
-                    <td className={TD_CLASS}>
-                      {PLAN_KIND_LABELS[entry.plan.kind] ?? entry.plan.kind}
-                    </td>
-                    <td className={TD_CLASS}>{entry.plan.durationDays} días</td>
-                    <td className={`${TD_CLASS} font-semibold`}>
-                      {formatMoney(entry.price, "es-CO")}
-                    </td>
-                    <td className={TD_CLASS}>
-                      <BuyButton planId={entry.plan.id} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ))}
-    </div>
+    <>
+      <h3 className="text-2xl text-[#dae2fd] font-semibold flex items-center gap-2">
+        <Store className="text-[#4cd7f6] h-6 w-6" />
+        Available Services
+      </h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {plans.map((entry, index) => {
+          // Compute pseudo-random colors based on index for the glow effect
+          const colors = ['bg-[#d0bcff]/10', 'bg-[#0055D4]/10', 'bg-[#5A0BB5]/10', 'bg-[#00A8E1]/10'];
+          const hoverColors = ['group-hover:bg-[#d0bcff]/20', 'group-hover:bg-[#0055D4]/20', 'group-hover:bg-[#5A0BB5]/20', 'group-hover:bg-[#00A8E1]/20'];
+          const bgGlow = colors[index % colors.length];
+          const hoverGlow = hoverColors[index % hoverColors.length];
+          const firstLetter = entry.plan.name.charAt(0).toUpperCase();
+
+          return (
+            <div key={entry.plan.id} className="bg-[#171f33] p-6 rounded-xl border border-[#494454] border-t-white/10 flex flex-col justify-between group hover:border-[#d0bcff]/50 transition-colors relative overflow-hidden min-h-[220px]">
+              {/* Background accent */}
+              <div className={`absolute -right-10 -top-10 w-32 h-32 rounded-full blur-2xl transition-all ${bgGlow} ${hoverGlow}`}></div>
+              
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <div className="w-12 h-12 rounded-lg bg-[#0b1326] flex items-center justify-center border border-[#494454]">
+                  <span className="font-bold text-2xl text-white">{firstLetter}</span>
+                </div>
+                {entry.plan.kind === 'FULL_ACCOUNT' && (
+                  <span className="bg-[#4cd7f6]/15 text-[#4cd7f6] px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                    <Flame className="h-4 w-4" /> High Demand
+                  </span>
+                )}
+              </div>
+              
+              <div className="mb-6 relative z-10">
+                <h4 className="text-xl text-[#dae2fd] font-bold">{entry.plan.name}</h4>
+                <p className="text-sm text-[#cbc3d7] mt-1">{PLAN_KIND_LABELS[entry.plan.kind] ?? entry.plan.kind} • {entry.plan.durationDays} Días</p>
+              </div>
+              
+              <div className="flex items-center justify-between mt-auto relative z-10">
+                <div>
+                  <p className="text-xs font-semibold text-[#cbc3d7] line-through opacity-0">$0.00</p>
+                  <p className="text-2xl text-[#d0bcff] font-bold">{formatMoney(entry.price, "es-CO")}</p>
+                </div>
+                {/* Wrap the standard BuyButton */}
+                <BuyButton planId={entry.plan.id} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

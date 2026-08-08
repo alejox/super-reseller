@@ -1,73 +1,104 @@
 "use client";
 
-import { useActionState } from "react";
-
+import { useActionState, useState } from "react";
+import { Mail, Lock, EyeOff, Eye, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { login, type LoginFormState } from "@/modules/identity/application/actions";
 
 const INITIAL_STATE: LoginFormState = undefined;
 
-const fieldClass =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-[15px] text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder:text-zinc-500 dark:focus:border-zinc-100 dark:focus:ring-zinc-100/20";
-
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(login, INITIAL_STATE);
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form action={formAction} className="flex flex-col gap-5" noValidate>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-          Correo electrónico
+    <form action={formAction} className="space-y-6" noValidate>
+      {/* Email Input */}
+      <div className="space-y-2">
+        <label htmlFor="email" className="text-xs font-semibold tracking-wider text-[#dae2fd] block">
+          Correo Electrónico
         </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          disabled={pending}
-          placeholder="tucorreo@ejemplo.com"
-          // The error is not tied to a single field: the server cannot say
-          // which one was wrong without leaking whether the email exists.
-          aria-describedby={state?.error ? "login-error" : undefined}
-          className={fieldClass}
-        />
+        <div className="relative">
+          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#494454]" />
+          <input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            disabled={pending}
+            placeholder="admin@empresa.com"
+            aria-describedby={state?.error ? "login-error" : undefined}
+            className="w-full bg-[#060e20] text-[#dae2fd] text-base rounded-lg py-3 pl-12 pr-4 border border-[#494454]/30 focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] focus:outline-none transition-all placeholder:text-[#958ea0]/50"
+          />
+        </div>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      {/* Password Input */}
+      <div className="space-y-2">
+        <label htmlFor="password" className="text-xs font-semibold tracking-wider text-[#dae2fd] block">
           Contraseña
         </label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          required
-          disabled={pending}
-          aria-describedby={state?.error ? "login-error" : undefined}
-          className={fieldClass}
-        />
+        <div className="relative">
+          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#494454]" />
+          <input
+            id="password"
+            name="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+            disabled={pending}
+            placeholder="••••••••"
+            aria-describedby={state?.error ? "login-error" : undefined}
+            className="w-full bg-[#060e20] text-[#dae2fd] text-base rounded-lg py-3 pl-12 pr-12 border border-[#494454]/30 focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] focus:outline-none transition-all placeholder:text-[#958ea0]/50"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#494454] hover:text-[#d0bcff] transition-colors focus:outline-none"
+          >
+            {showPassword ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+          </button>
+        </div>
       </div>
 
       {state?.error ? (
         <p
           id="login-error"
-          // `role="alert"` so screen readers announce the failure without
-          // the user having to go looking for it.
           role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+          className="rounded-lg border border-red-900/50 bg-red-950/40 px-3.5 py-2.5 text-sm text-red-300"
         >
           {state.error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-1 inline-flex h-11 items-center justify-center rounded-lg bg-zinc-900 px-5 text-[15px] font-medium text-white transition hover:bg-zinc-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-900 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-white dark:focus-visible:outline-zinc-100"
-      >
-        {pending ? "Ingresando…" : "Ingresar"}
-      </button>
+      {/* Options Row */}
+      <div className="flex items-center justify-between pt-2">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <input
+            type="checkbox"
+            className="rounded bg-[#060e20] border-[#494454] text-[#d0bcff] focus:ring-[#d0bcff] focus:ring-offset-[#171f33] w-4 h-4 transition-colors"
+          />
+          <span className="text-sm text-[#cbc3d7] group-hover:text-[#dae2fd] transition-colors">Recordarme</span>
+        </label>
+        <Link href="#" className="text-xs font-semibold tracking-wider text-[#d0bcff] hover:text-[#4cd7f6] transition-colors">
+          ¿Olvidaste tu contraseña?
+        </Link>
+      </div>
+
+      {/* Submit Button */}
+      <div className="pt-4">
+        <button
+          type="submit"
+          disabled={pending}
+          className="w-full bg-gradient-to-r from-[#d0bcff] to-[#6d3bd7] text-[#3c0091] text-xs font-semibold tracking-wider py-4 rounded-lg shadow-[0_4px_20px_rgba(208,188,255,0.15)] hover:shadow-[0_4px_25px_rgba(208,188,255,0.25)] hover:opacity-90 active:scale-[0.98] transition-all flex justify-center items-center gap-2 relative overflow-hidden group disabled:opacity-60 disabled:active:scale-100"
+        >
+          <span className="relative z-10">{pending ? "Iniciando Sesión..." : "Iniciar Sesión"}</span>
+          <ArrowRight className="relative z-10 h-5 w-5" />
+          {/* Hover sheen */}
+          <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700 ease-in-out"></div>
+        </button>
+      </div>
     </form>
   );
 }

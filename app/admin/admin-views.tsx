@@ -1,61 +1,242 @@
+"use client";
+
 import Link from "next/link";
+import { Card } from "@/app/_components/ui/card";
+
+import { 
+  LayoutDashboard, 
+  Users, 
+  MonitorPlay, 
+  Wallet, 
+  Headset, 
+  Settings 
+} from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export function AdminNavigation() {
+  const pathname = usePathname();
+  
+  const navItems = [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { name: "Reseller Network", href: "/admin/resellers", icon: Users },
+    { name: "Account Inventory", href: "/admin/inventory", icon: MonitorPlay },
+    { name: "Financials", href: "/admin/orders", icon: Wallet },
+    { name: "Support", href: "/admin/support", icon: Headset },
+    { name: "Settings", href: "/admin/settings", icon: Settings },
+  ];
+
   return (
-    <nav aria-label="Navegación de administración" className="flex gap-1 lg:flex-col">
-      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin">
-        Inicio
-      </Link>
-      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/catalog">
-        Catálogo
-      </Link>
-      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/resellers">
-        Revendedores
-      </Link>
-      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/customers">
-        Clientes
-      </Link>
-      <Link className="rounded-lg px-3 py-2 text-sm font-medium hover:bg-zinc-100" href="/admin/orders">
-        Órdenes
-      </Link>
-    </nav>
+    <ul className="flex flex-col gap-2">
+      {navItems.map((item) => {
+        // We consider /admin/catalog and /admin/inventory both as "Account Inventory"
+        const isActive = pathname === item.href || (item.name === "Account Inventory" && pathname.startsWith("/admin/catalog"));
+        const Icon = item.icon;
+        
+        return (
+          <li key={item.name}>
+            <Link
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base transition-colors active:scale-95 duration-150 ${
+                isActive 
+                  ? "text-primary font-bold border-r-4 border-primary bg-primary-container/10" 
+                  : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-highest"
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="font-semibold text-sm">{item.name}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
+import { Plus, ShieldCheck, Banknote, Store, Users as UsersIcon, Ticket, MoreVertical, CheckCircle2 } from "lucide-react";
+
 export function AdminDashboardView() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8 sm:py-12">
-      <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Resumen</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Panel de administración</h1>
-        <p className="max-w-2xl text-zinc-600">Configure el catálogo de productos antes de incorporar revendedores.</p>
-      </header>
-      <section aria-labelledby="workspace-heading" className="space-y-4">
-        <h2 id="workspace-heading" className="text-sm font-semibold text-zinc-500">Espacio de trabajo</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/catalog">
-            <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Catálogo</span>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">La configuración del catálogo está disponible</p>
-            <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir catálogo →</span>
-          </Link>
-          <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/resellers">
-            <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Revendedores</span>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">Cuentas y su nivel de precio</p>
-            <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir revendedores →</span>
-          </Link>
-          <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/customers">
-            <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Clientes</span>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">Cuentas y su nivel de precio</p>
-            <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir clientes →</span>
-          </Link>
-          <Link className="group rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md" href="/admin/orders">
-            <span className="text-lg font-semibold text-zinc-950 group-hover:text-emerald-700">Órdenes</span>
-            <p className="mt-2 text-sm leading-6 text-zinc-600">Ventas cobradas y pendientes de entrega</p>
-            <span className="mt-6 inline-block text-sm font-semibold text-emerald-700">Abrir órdenes →</span>
-          </Link>
+    <div className="mx-auto flex w-full flex-col p-6 lg:p-10 gap-8">
+      {/* Page Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 className="text-3xl font-semibold text-on-surface">Overview</h2>
+          <p className="text-sm text-on-surface-variant mt-1">Global statistics and recent network activity.</p>
         </div>
-      </section>
-    </main>
+        <div className="flex gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface text-xs font-semibold tracking-wide hover:bg-surface-container-highest transition-colors">
+            <Plus className="w-[18px] h-[18px]" />
+            Add New Service
+          </button>
+          <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-secondary-container text-on-secondary-container text-xs font-semibold tracking-wide hover:bg-secondary-fixed transition-colors">
+            <ShieldCheck className="w-[18px] h-[18px]" />
+            Verify Payment
+          </button>
+        </div>
+      </div>
+
+      {/* Bento Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Stat Card 1 */}
+        <div className="bg-surface-container-high/60 backdrop-blur-md rounded-xl p-6 border-t border-t-tertiary-fixed-dim/30 flex flex-col justify-between h-32 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-xl group-hover:bg-primary/20 transition-all"></div>
+          <div className="flex justify-between items-start z-10">
+            <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Total Revenue</p>
+            <Banknote className="w-5 h-5 text-tertiary" />
+          </div>
+          <div className="z-10">
+            <h3 className="text-3xl font-bold text-on-surface">$124,592.00</h3>
+            <p className="text-sm text-tertiary flex items-center gap-1 mt-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              +14.5% from last month
+            </p>
+          </div>
+        </div>
+
+        {/* Stat Card 2 */}
+        <div className="bg-surface-container-high/60 backdrop-blur-md rounded-xl p-6 border-t border-t-primary/30 flex flex-col justify-between h-32 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-xl group-hover:bg-primary/20 transition-all"></div>
+          <div className="flex justify-between items-start z-10">
+            <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Active Resellers</p>
+            <Store className="w-5 h-5 text-primary" />
+          </div>
+          <div className="z-10">
+            <h3 className="text-3xl font-bold text-on-surface">3,204</h3>
+            <p className="text-sm text-primary flex items-center gap-1 mt-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              +2.1% this week
+            </p>
+          </div>
+        </div>
+
+        {/* Stat Card 3 */}
+        <div className="bg-surface-container-high/60 backdrop-blur-md rounded-xl p-6 border-t border-t-secondary/30 flex flex-col justify-between h-32 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-secondary/10 rounded-full blur-xl group-hover:bg-secondary/20 transition-all"></div>
+          <div className="flex justify-between items-start z-10">
+            <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Total Clients</p>
+            <UsersIcon className="w-5 h-5 text-secondary" />
+          </div>
+          <div className="z-10">
+            <h3 className="text-3xl font-bold text-on-surface">45,892</h3>
+            <p className="text-sm text-on-surface-variant mt-1">Across all networks</p>
+          </div>
+        </div>
+
+        {/* Stat Card 4 */}
+        <div className="bg-surface-container-high/60 backdrop-blur-md rounded-xl p-6 border-t border-t-error/30 flex flex-col justify-between h-32 relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-error/10 rounded-full blur-xl group-hover:bg-error/20 transition-all"></div>
+          <div className="flex justify-between items-start z-10">
+            <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Pending Tickets</p>
+            <Ticket className="w-5 h-5 text-error" />
+          </div>
+          <div className="z-10">
+            <h3 className="text-3xl font-bold text-on-surface">18</h3>
+            <p className="text-sm text-error flex items-center gap-1 mt-1">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              3 high priority
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Lower Section Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart Area (Spans 2 cols) */}
+        <div className="lg:col-span-2 bg-surface-container-high/60 backdrop-blur-md rounded-xl p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-semibold text-on-surface">Monthly Sales Growth</h3>
+            <button className="p-2 rounded-lg hover:bg-surface-container-highest transition-colors text-on-surface-variant">
+              <MoreVertical className="w-5 h-5" />
+            </button>
+          </div>
+          {/* Placeholder for Chart */}
+          <div className="w-full h-64 bg-surface-container-low rounded-lg border border-outline-variant flex items-center justify-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-32 opacity-50" style={{ backgroundImage: "url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIHByZXNlcnZlQXNwZWN0UmF0aW89Im5vbmUiPjxwYXRoIGQ9Ik0wLDEwMCBDMjAsNTAgNTAsODAgMTAwLDIwIEwxMDAsMTAwIFoiIGZpbGw9InJnYmEoMjA4LCAxODgsIDI1NSwgMC4yKSIvPjwvc3ZnPg==')", backgroundRepeat: 'no-repeat', backgroundSize: 'cover', backgroundPosition: 'bottom' }}></div>
+            <p className="text-sm text-on-surface-variant z-10">[Chart Visualization Area]</p>
+          </div>
+        </div>
+
+        {/* Activity Table (Spans 1 col) */}
+        <div className="bg-surface-container-high/60 backdrop-blur-md rounded-xl p-0 overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-outline-variant flex justify-between items-center bg-surface-container/50">
+            <h3 className="text-2xl font-semibold text-on-surface">Recent Reseller Activity</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto max-h-[300px]">
+            <table className="w-full text-left border-collapse">
+              <tbody>
+                <tr className="border-b border-outline-variant hover:bg-surface-container-highest/50 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-tertiary-container flex items-center justify-center text-on-tertiary-container text-xs font-bold">JD</div>
+                      <div>
+                        <p className="text-base text-on-surface">John Doe</p>
+                        <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Purchased 50 Credits</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <p className="text-sm text-tertiary">+$250.00</p>
+                    <p className="text-xs font-semibold tracking-wider text-on-surface-variant">2 mins ago</p>
+                  </td>
+                </tr>
+                <tr className="border-b border-outline-variant hover:bg-surface-container-highest/50 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container text-xs font-bold">AS</div>
+                      <div>
+                        <p className="text-base text-on-surface">Alpha Streams</p>
+                        <p className="text-xs font-semibold tracking-wider text-on-surface-variant">New Account Created</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <span className="inline-block px-2 py-1 rounded bg-secondary/15 text-secondary text-xs font-bold">Active</span>
+                    <p className="text-xs font-semibold tracking-wider text-on-surface-variant mt-1">15 mins ago</p>
+                  </td>
+                </tr>
+                <tr className="border-b border-outline-variant hover:bg-surface-container-highest/50 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-error-container flex items-center justify-center text-on-error-container text-xs font-bold">TS</div>
+                      <div>
+                        <p className="text-base text-on-surface">Tech Support</p>
+                        <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Ticket #492 Closed</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-right flex flex-col items-end">
+                    <CheckCircle2 className="w-[18px] h-[18px] text-on-surface-variant" />
+                    <p className="text-xs font-semibold tracking-wider text-on-surface-variant mt-1">1 hr ago</p>
+                  </td>
+                </tr>
+                <tr className="hover:bg-surface-container-highest/50 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container text-xs font-bold">MR</div>
+                      <div>
+                        <p className="text-base text-on-surface">Media Resell</p>
+                        <p className="text-xs font-semibold tracking-wider text-on-surface-variant">Service Renewed</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-right">
+                    <p className="text-sm text-tertiary">+$120.00</p>
+                    <p className="text-xs font-semibold tracking-wider text-on-surface-variant">3 hrs ago</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -66,9 +247,15 @@ export function AdminDashboardView() {
 export function AdminCatalogHeader() {
   return (
     <header className="space-y-2">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Catálogo</p>
-      <h1 className="text-3xl font-semibold tracking-tight text-zinc-950 sm:text-4xl">Gestión del catálogo</h1>
-      <p className="max-w-2xl text-zinc-600">Defina los niveles de precio y los servicios antes de cargar los planes.</p>
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9D72FF]">
+        Catálogo
+      </p>
+      <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+        Gestión del catálogo
+      </h1>
+      <p className="max-w-2xl text-slate-400">
+        Defina los niveles de precio y los servicios antes de cargar los planes.
+      </p>
     </header>
   );
 }

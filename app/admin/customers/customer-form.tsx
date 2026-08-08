@@ -4,8 +4,8 @@ import { useActionState, useEffect, useRef } from "react";
 
 import { createCustomerAction } from "./actions";
 
-const FIELD_CLASS =
-  "w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-950 placeholder:text-zinc-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100";
+import { buttonVariants } from "@/app/_components/ui/button";
+import { Field, FIELD_CLASS } from "@/app/_components/ui/field";
 
 export type TierOption = Readonly<{ id: string; code: string; name: string }>;
 
@@ -25,10 +25,13 @@ export function CreateCustomerForm({ tiers }: Readonly<{ tiers: readonly TierOpt
   }, [state, pending]);
 
   return (
-    <form action={action} className="mt-6 space-y-3 border-t border-zinc-200 pt-6" ref={formRef}>
+    <form
+      action={action}
+      className="mt-6 space-y-3 border-t border-zinc-200 pt-6 dark:border-zinc-800"
+      ref={formRef}
+    >
       <div className="grid gap-3 sm:grid-cols-3">
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Correo electrónico</span>
+        <Field label="Correo electrónico">
           <input
             autoComplete="off"
             className={FIELD_CLASS}
@@ -37,9 +40,8 @@ export function CreateCustomerForm({ tiers }: Readonly<{ tiers: readonly TierOpt
             required
             type="email"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Contraseña inicial</span>
+        </Field>
+        <Field label="Contraseña inicial">
           <input
             autoComplete="new-password"
             className={FIELD_CLASS}
@@ -48,9 +50,8 @@ export function CreateCustomerForm({ tiers }: Readonly<{ tiers: readonly TierOpt
             required
             type="password"
           />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-zinc-600">Nivel de precio</span>
+        </Field>
+        <Field label="Nivel de precio">
           <select className={FIELD_CLASS} name="priceTierId" required>
             {tiers.map((tier) => (
               <option key={tier.id} value={tier.id}>
@@ -58,22 +59,18 @@ export function CreateCustomerForm({ tiers }: Readonly<{ tiers: readonly TierOpt
               </option>
             ))}
           </select>
-        </label>
+        </Field>
       </div>
       <div className="flex items-center gap-3">
-        <button
-          className="inline-flex items-center justify-center rounded-lg bg-zinc-950 px-4 py-2 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-          disabled={pending}
-          type="submit"
-        >
+        <button className={buttonVariants()} disabled={pending} type="submit">
           {pending ? "Creando…" : "Crear cliente"}
         </button>
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Entregue la contraseña por un canal seguro; no vuelve a mostrarse.
         </p>
       </div>
       {state !== undefined && (
-        <p className="text-sm font-medium text-red-600" role="alert">
+        <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
           {state.error}
         </p>
       )}
