@@ -59,4 +59,6 @@ export interface OrderingRepository {
    * someone else are the same answer: nothing to do.
    */
   fulfilOrder(orderId: SalesOrderId, note: string | null): Promise<SalesOrder | null>;
+
+  getOrder(orderId: SalesOrderId): Promise<SalesOrder | null>;
 }

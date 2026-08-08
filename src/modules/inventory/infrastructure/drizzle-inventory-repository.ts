@@ -10,6 +10,9 @@ export interface InventoryRepository {
   createAccount(data: InsertInventoryAccount): Promise<InventoryAccountRow>;
   updateAccount(id: string, data: Partial<InsertInventoryAccount>): Promise<InventoryAccountRow | undefined>;
   getAccount(id: string): Promise<InventoryAccountRow | undefined>;
+  getAccountByProviderId(providerAccountId: string): Promise<InventoryAccountRow | undefined>;
+  findAvailableAccount(resellerId: string, serviceId: string): Promise<InventoryAccountRow | undefined>;
+  assignAccount(accountId: string, userId: string, providerAccountId: string | null): Promise<void>;
 }
 
 export class DrizzleInventoryRepository implements InventoryRepository {
@@ -49,5 +52,40 @@ export class DrizzleInventoryRepository implements InventoryRepository {
       .from(inventoryAccounts)
       .where(eq(inventoryAccounts.id, id));
     return row;
+  }
+
+  async getAccountByProviderId(providerAccountId: string): Promise<InventoryAccountRow | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(inventoryAccounts)
+      .where(eq(inventoryAccounts.providerAccountId, providerAccountId));
+    return row;
+  }
+
+  async findAvailableAccount(resellerId: string, serviceId: string): Promise<InventoryAccountRow | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(inventoryAccounts)
+      .where(
+        and(
+          eq(inventoryAccounts.resellerId, resellerId),
+          eq(inventoryAccounts.serviceId, serviceId),
+          eq(inventoryAccounts.status, "AVAILABLE")
+        )
+      )
+      .limit(1);
+    return row;
+  }
+
+  async assignAccount(accountId: string, userId: string, providerAccountId: string | null): Promise<void> {
+    await this.db
+      .update(inventoryAccounts)
+      .set({
+        status: "ASSIGNED",
+        assignedTo: userId,
+        providerAccountId: providerAccountId,
+        updatedAt: sql`now()`
+      })
+      .where(eq(inventoryAccounts.id, accountId));
   }
 }

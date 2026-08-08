@@ -12,14 +12,14 @@ import {
   HelpCircle 
 } from "lucide-react";
 import Image from "next/image";
+import { InventoryAccountRow } from "@/modules/inventory/infrastructure/inventory.schema";
 
-export default function AccountDeliveryPage() {
+export default function AccountDeliveryClient({ account }: { account: InventoryAccountRow }) {
   const [showPassword, setShowPassword] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPass, setCopiedPass] = useState(false);
-
-  const email = "user492@stream-resell.net";
-  const password = "Str3amP@ss!99";
+  const email = account.email;
+  const password = account.password;
 
   // Simple confetti effect
   useEffect(() => {
@@ -137,7 +137,7 @@ export default function AccountDeliveryPage() {
                   <User className="text-[#c4c1fb] w-6 h-6" />
                   <div>
                     <label className="text-[10px] font-bold text-[#cbc3d7] block uppercase tracking-wider">Assigned Profile</label>
-                    <span className="text-base text-[#c4c1fb] font-bold">Profile 3</span>
+                    <span className="text-base text-[#c4c1fb] font-bold">{account.profileSlot || "N/A"}</span>
                   </div>
                 </div>
               </div>

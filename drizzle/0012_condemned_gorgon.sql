@@ -1,0 +1,2 @@
+ALTER TABLE "inventory_accounts" ADD COLUMN "provider_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "inventory_accounts" ADD CONSTRAINT "inventory_accounts_provider_account_id_provider_account_id_fk" FOREIGN KEY ("provider_account_id") REFERENCES "public"."provider_account"("id") ON DELETE no action ON UPDATE no action;

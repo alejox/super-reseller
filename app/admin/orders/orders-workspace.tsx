@@ -21,6 +21,7 @@ import {
 
 import { adminOrdersDeps } from "./admin-orders";
 import { formatMoney, money } from "@/shared/money/money";
+import { AutoDeliverForm } from "./auto-deliver-form";
 
 export async function OrdersWorkspace() {
   const deps = await adminOrdersDeps();
@@ -188,7 +189,10 @@ export async function OrdersWorkspace() {
                         </span>
                       )}
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right flex items-center justify-end gap-2">
+                      {view.order.status === "PENDING" && (
+                        <AutoDeliverForm orderId={view.order.id} />
+                      )}
                       <Link href={`/admin/orders/${view.order.id}`} className="text-[#cbc3d7] hover:text-[#d0bcff] transition-colors inline-block p-1">
                         <MoreVertical className="w-5 h-5" />
                       </Link>

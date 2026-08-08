@@ -265,4 +265,19 @@ export class DrizzleOrderingRepository implements OrderingRepository {
         })
       : null;
   }
+
+  async getOrder(orderId: SalesOrderId): Promise<SalesOrder | null> {
+    const [row] = await this.db
+      .select()
+      .from(salesOrder)
+      .where(and(tenantWhere(salesOrder, this.scope), eq(salesOrder.id, orderId)));
+      
+    if (!row) return null;
+    
+    return Object.freeze({
+      ...row,
+      status: row.status as SalesOrderStatus,
+      buyerKind: row.buyerKind as BuyerKind,
+    });
+  }
 }
