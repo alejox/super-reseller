@@ -29,7 +29,7 @@ import type { ResellerId, UserId, WalletEntryId } from "./ids";
  * enum — an enum value can never be removed once shipped. `ORDER_DEBIT` was
  * added by the ordering module without touching a single existing row.
  */
-export type WalletEntryKind = "TOPUP" | "ADJUSTMENT" | "ORDER_DEBIT";
+export type WalletEntryKind = "TOPUP" | "ADJUSTMENT" | "ORDER_DEBIT" | "WITHDRAWAL";
 
 export type WalletEntry = Readonly<{
   id: WalletEntryId;
