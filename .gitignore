@@ -44,3 +44,7 @@ next-env.d.ts
 # agent tooling state (machine-specific, generated)
 .atl/
 .playwright-mcp/
+
+# Supplier panel sessions (live cookies) and page dumps — never commit these.
+.sessions/
+.captures/

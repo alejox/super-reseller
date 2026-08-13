@@ -14,5 +14,6 @@ export * from "../../modules/identity/infrastructure/identity.schema";
 export * from "../../modules/wallet/infrastructure/wallet.schema";
 export * from "../../modules/ordering/infrastructure/ordering.schema";
 export * from "../../modules/provider-accounts/infrastructure/provider-account.schema";
+export * from "../../modules/source-accounts/infrastructure/source-account.schema";
 export * from "@/modules/support/infrastructure/support.schema";
 export * from "@/modules/inventory/infrastructure/inventory.schema";

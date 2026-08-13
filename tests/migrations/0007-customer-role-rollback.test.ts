@@ -33,6 +33,8 @@ const TIER_ID = "99999999-9999-4999-8999-999999999999";
  * here instead of surfacing as an unrelated mystery three assertions later.
  */
 const ABOVE_0007 = [
+  "0018_recharge_attempts",
+  "0017_source_accounts",
   "0016_payment_requests",
   "0015_rls_lockdown_withdrawals",
   "0014_groovy_supernaut",

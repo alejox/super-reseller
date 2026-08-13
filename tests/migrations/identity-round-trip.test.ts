@@ -92,9 +92,12 @@ describe("identity migration round trip (apply all, roll the identity stack back
       "plan_price",
       "price_tier",
       "provider_account",
+      "recharge_attempt",
       "sales_order",
       "service",
       "sessions",
+      "source_account",
+      "source_account_credit",
       "ticket_messages",
       "tickets",
       "topup_settings",
@@ -117,6 +120,8 @@ describe("identity migration round trip (apply all, roll the identity stack back
     // hand-authored down file fails HERE, named, instead of surfacing as a
     // mystery further down.
     for (const tag of [
+      "0018_recharge_attempts",
+      "0017_source_accounts",
       "0016_payment_requests",
       "0015_rls_lockdown_withdrawals",
       "0014_groovy_supernaut",

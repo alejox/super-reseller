@@ -268,6 +268,38 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // `source-accounts` — the PLATFORM's own accounts on each provider, not to
+  // be confused with `provider-accounts` above, which is the customer-owned
+  // mirror image. Same zones, same reasons: the domain stays free of drizzle
+  // and of other modules' entity types, and only `dal.ts` mints scopes.
+  {
+    files: ["src/modules/source-accounts/domain/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noDrizzleInDomain.paths, ...noMintersOutsideDal.paths],
+          patterns: [
+            ...noDrizzleInDomain.patterns,
+            ...noIdentityEntityImport.patterns,
+            ...noCatalogEntityImport.patterns,
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/modules/source-accounts/{application,infrastructure}/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [...noMintersOutsideDal.paths],
+          patterns: [...noCatalogEntityImport.patterns],
+        },
+      ],
+    },
+  },
   // Test files are the second sanctioned AccessScope minting site: the
   // minters' "dal.ts only" seal protects PRODUCTION code paths from forging
   // scopes, but the isolation contract suite (4.8) and the reseller-surface

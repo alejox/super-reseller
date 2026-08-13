@@ -10,7 +10,8 @@ import {
   Headset,
   Settings,
   ShieldCheck,
-  Tags
+  Tags,
+  PlugZap
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
@@ -22,6 +23,11 @@ const NAV_ITEMS = [
   // to reach it. It sits above Account Inventory because it is what inventory
   // is stocked AGAINST — services, plans and prices are defined here first.
   { name: "Catálogo", href: "/admin/catalog", icon: Tags },
+  // Sits next to Account Inventory because the two are constantly confused and
+  // the nav is where that confusion starts: "Cuentas fuente" are the accounts
+  // the platform OWNS and recharges from, Account Inventory holds the ones it
+  // HANDS OVER to a customer.
+  { name: "Cuentas fuente", href: "/admin/source-accounts", icon: PlugZap },
   { name: "Account Inventory", href: "/admin/inventory", icon: MonitorPlay },
   { name: "Financials", href: "/admin/orders", icon: Wallet },
   { name: "Support", href: "/admin/support", icon: Headset },
