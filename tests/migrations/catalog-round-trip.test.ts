@@ -63,6 +63,8 @@ describe("catalog migration round trip (apply then rollback all)", () => {
     await migrate(testDb.db, { migrationsFolder: DRIZZLE_DIR });
 
     expect(await publicTableNames(testDb)).toEqual([
+      "inventory_accounts",
+      "payment_request",
       "plan",
       "plan_price",
       "price_tier",
@@ -70,35 +72,61 @@ describe("catalog migration round trip (apply then rollback all)", () => {
       "sales_order",
       "service",
       "sessions",
+      "ticket_messages",
+      "tickets",
+      "topup_settings",
       "users",
       "wallet_entry",
+      "withdrawal_methods",
+      "withdrawal_request",
+      "withdrawal_settings",
     ]);
 
     // 0004 must cover EVERY table, not just the sensitive ones: a single
     // table left out is a readable copy of whatever it holds. PGlite has no
     // `anon` role, so the REVOKE half of 0004 is inert here and only the RLS
     // half is observable — the grants are asserted against Supabase itself.
+    // EVERY table, with no exception — this list must stay identical to the
+    // one above. 0004 revoked Supabase's default GRANTs so a new table gets
+    // none, but RLS is per-table state that a freshly created table simply
+    // does not inherit, and drizzle-kit will never emit the line. This
+    // assertion is the tripwire for the next table someone adds without it,
+    // and it is the one that would have caught 0010-0014 shipping unlocked
+    // (0015 went back and fixed all six at once).
     expect(await rlsEnabledTableNames(testDb)).toEqual([
+      "inventory_accounts",
+      "payment_request",
       "plan",
       "plan_price",
       "price_tier",
-      // Every table added after 0004 has to enable RLS in its own migration.
       "provider_account",
       "sales_order",
       "service",
       "sessions",
+      "ticket_messages",
+      "tickets",
+      "topup_settings",
       "users",
-      // 0005 had to enable this one itself. 0004 revoked Supabase's default
-      // GRANTs so a new table gets none, but RLS is per-table state that a
-      // freshly created table simply does not inherit — and drizzle-kit will
-      // never emit the line. This assertion is the tripwire for the next
-      // table someone adds without it.
       "wallet_entry",
+      "withdrawal_methods",
+      "withdrawal_request",
+      "withdrawal_settings",
     ]);
 
     const rolledBack = await rollbackAll(testDb.db, DRIZZLE_DIR);
 
+    // Newest first, every journaled migration. A tag missing from this list
+    // means a migration shipped without the hand-authored down file
+    // `src/shared/db/migrator.ts` requires — which is exactly how 0010
+    // through 0015 went unnoticed until somebody read the failure.
     expect(rolledBack).toEqual([
+      "0016_payment_requests",
+      "0015_rls_lockdown_withdrawals",
+      "0014_groovy_supernaut",
+      "0013_new_lila_cheney",
+      "0012_condemned_gorgon",
+      "0011_happy_red_skull",
+      "0010_majestic_starhawk",
       "0009_customer_orders",
       "0008_provider_account",
       "0007_customer_role",

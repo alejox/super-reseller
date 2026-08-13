@@ -26,8 +26,14 @@ export default function GatewaysSettingsPage() {
           <h2 className="text-3xl font-semibold text-[#dae2fd] mb-1">Configuración de Pasarelas de Pago</h2>
           <p className="text-sm text-[#cbc3d7]">Gestiona y configura los métodos de pago disponibles para tus revendedores.</p>
         </div>
-        <div>
-          <Link 
+        <div className="flex items-center gap-3">
+          <Link
+            href="/admin/settings/topups"
+            className="px-4 py-2 rounded-lg bg-[#222a3d] border border-[#494454] text-[#dae2fd] hover:bg-[#31394d] transition-colors text-xs font-bold uppercase tracking-wider"
+          >
+            Límites de Recarga
+          </Link>
+          <Link
             href="/admin/settings/withdrawals"
             className="px-4 py-2 rounded-lg bg-[#222a3d] border border-[#494454] text-[#dae2fd] hover:bg-[#31394d] transition-colors text-xs font-bold uppercase tracking-wider"
           >
@@ -287,27 +293,15 @@ export default function GatewaysSettingsPage() {
                         className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 pl-3 pr-3 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors" 
                       />
                     </div>
-                    <div>
-                      <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5">Mínimo Recarga</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#958ea0] text-sm font-mono">$</span>
-                        <input 
-                          type="number" 
-                          defaultValue="10.00"
-                          className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 pl-7 pr-3 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors" 
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5">Máximo Recarga</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#958ea0] text-sm font-mono">$</span>
-                        <input 
-                          type="number" 
-                          defaultValue="1000.00"
-                          className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 pl-7 pr-3 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors" 
-                        />
-                      </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5">Límites de recarga</label>
+                      <Link
+                        href="/admin/settings/topups"
+                        className="flex items-center justify-between w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 px-3 text-[#dae2fd] text-sm hover:border-[#d0bcff] transition-colors"
+                      >
+                        <span>Configurar mínimo y máximo</span>
+                        <span className="text-[11px] text-[#cbc3d7]">Se aplican en el servidor</span>
+                      </Link>
                     </div>
                   </div>
                 </div>
@@ -436,27 +430,15 @@ export default function GatewaysSettingsPage() {
                         className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 pl-3 pr-3 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors" 
                       />
                     </div>
-                    <div>
-                      <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5">Mínimo Recarga</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#958ea0] text-sm font-mono">$</span>
-                        <input 
-                          type="number" 
-                          defaultValue="10.00"
-                          className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 pl-7 pr-3 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors" 
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5">Máximo Recarga</label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#958ea0] text-sm font-mono">$</span>
-                        <input 
-                          type="number" 
-                          defaultValue="1000.00"
-                          className="w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 pl-7 pr-3 text-[#dae2fd] text-sm focus:outline-none focus:border-[#d0bcff] focus:ring-1 focus:ring-[#d0bcff] transition-colors" 
-                        />
-                      </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[#cbc3d7] text-xs font-bold mb-1.5">Límites de recarga</label>
+                      <Link
+                        href="/admin/settings/topups"
+                        className="flex items-center justify-between w-full bg-[#2d3449] border border-[#494454] rounded-lg py-2 px-3 text-[#dae2fd] text-sm hover:border-[#d0bcff] transition-colors"
+                      >
+                        <span>Configurar mínimo y máximo</span>
+                        <span className="text-[11px] text-[#cbc3d7]">Se aplican en el servidor</span>
+                      </Link>
                     </div>
                   </div>
                 </div>

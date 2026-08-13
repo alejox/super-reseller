@@ -1,0 +1,14 @@
+-- Hand-authored down migration for 0014_groovy_supernaut.sql (design.md:
+-- "Decision: hand-authored down migrations").
+--
+-- One statement, as the migrator requires (src/shared/db/migrator.ts runs this
+-- file as a single prepared statement). The index, the CHECKs and all five
+-- foreign keys belong to the table, so they go with it — no separate DROP is
+-- needed, and adding one would break the single-statement rule.
+--
+-- The wallet entries this table points at are NOT touched here: the debits and
+-- their reversals are the ledger's own record, and 0013's down is what removes
+-- them. Rolling only this back leaves every withdrawal's money still debited,
+-- with nothing left explaining why — which is the honest state, because the
+-- transfers really did happen.
+DROP TABLE IF EXISTS "withdrawal_request";

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { DEFAULT_WITHDRAWAL_SETTINGS, type WithdrawalMethod, type WithdrawalSettings } from "@/modules/wallet/domain/withdrawal";
 import { MANUAL_REVIEW_THRESHOLD_MINOR } from "@/modules/wallet/domain/withdrawal-request";
-import { WALLET_CURRENCY } from "@/modules/wallet/application/admin/top-up-balance";
+import { WALLET_CURRENCY } from "@/modules/wallet/domain/wallet-entry";
 import { formatMoney, money } from "@/shared/money/money";
 import { updateWithdrawalSettingsAction } from "@/modules/wallet/application/reseller/withdrawals.actions";
 

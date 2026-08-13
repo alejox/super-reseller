@@ -76,15 +76,26 @@ export class DrizzleWithdrawalRequestRepository implements WithdrawalRequestRepo
         return { ok: false, reason: "insufficient-funds", balanceMinor } as const;
       }
 
-      // `date_trunc('day', now() AT TIME ZONE 'UTC')` and not a JS-computed
-      // midnight: the cap is a database fact, and an app server whose clock
-      // or timezone drifts would move the window under it.
+      // Computed in the database and not in JS: the cap is a database fact,
+      // and an app server whose clock or timezone drifts would move the
+      // window under it.
+      //
+      // BOTH `AT TIME ZONE 'UTC'` are load-bearing. The inner one turns
+      // `now()` into the UTC wall clock; `date_trunc` then gives UTC midnight
+      // as a timestamp WITHOUT a zone. Comparing that against `requested_at`
+      // (a `timestamptz`) makes Postgres cast it back using the SESSION
+      // timezone — so with the session in Bogotá (UTC-5), between 19:00 and
+      // midnight local the UTC date has already rolled over and the boundary
+      // lands five hours in the FUTURE. Nothing from today counts, the cap
+      // resets, and a reseller withdraws twice the daily maximum. The outer
+      // `AT TIME ZONE 'UTC'` pins the boundary back to a real instant, so the
+      // window is a UTC day whatever the session is set to.
       const todayResult = await tx.execute<{ total: number } & Record<string, unknown>>(
         sql`SELECT coalesce(sum(amount_minor), 0)::bigint AS total
             FROM withdrawal_request
             WHERE reseller_id = ${command.resellerId}
               AND status <> 'REJECTED'
-              AND requested_at >= date_trunc('day', now() AT TIME ZONE 'UTC')`,
+              AND requested_at >= (date_trunc('day', now() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`,
       );
       const withdrawnTodayMinor = Number(todayResult.rows[0]?.total ?? 0);
 

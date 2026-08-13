@@ -6,10 +6,23 @@ import { provisionReseller } from "@/modules/identity/application/admin/provisio
 import { PRODUCTION_HASHER_PARAMS } from "@/modules/identity/domain/password-hasher";
 import { NodeRsArgon2Hasher } from "@/modules/identity/infrastructure/node-rs-argon2-hasher";
 import { MINIMUM_PASSWORD_LENGTH } from "@/modules/identity/application/admin/provision-admin";
-import { topUpBalance } from "@/modules/wallet/application/admin/top-up-balance";
+import { requestTopUp } from "@/modules/wallet/application/admin/request-top-up";
+import { WALLET_CURRENCY } from "@/modules/wallet/domain/wallet-entry";
+import { formatMoney, money } from "@/shared/money/money";
 import { adminResellerDeps } from "./admin-resellers";
 
 export type ResellerFormState = { readonly error: string } | undefined;
+
+/**
+ * The top-up form needs a SUCCESS state, which creating a reseller never did.
+ * "Nothing went wrong" is the wrong feedback here: the operator has to learn
+ * that the money was NOT credited and the claim is waiting for validation, or
+ * they will file it again.
+ */
+export type TopUpFormState =
+  | { readonly ok: true; readonly message: string }
+  | { readonly ok: false; readonly error: string }
+  | undefined;
 
 const ERRORS = {
   "email-invalid": "Ingrese un correo electrónico válido.",
@@ -22,20 +35,30 @@ const ERRORS = {
 const TOPUP_ERRORS = {
   "amount-invalid": "El monto debe ser un número entero de pesos mayor que cero.",
   "reseller-unknown": "El revendedor seleccionado ya no existe.",
+  "method-invalid": "Seleccione un medio de pago válido.",
+  "reference-required": "Ingrese la referencia del pago.",
+  "proof-required": "Adjunte el comprobante del pago antes de enviarlo a validación.",
+  "reference-taken":
+    "Esa referencia ya fue usada en un pago aprobado. Verifique que no sea un pago duplicado.",
 } as const;
 
-export async function topUpResellerAction(
-  _state: ResellerFormState,
+/**
+ * Files a payment claim. It does NOT credit anything — the reseller's balance
+ * is untouched until an admin approves the claim in `/admin/payments`.
+ */
+export async function requestTopUpAction(
+  _state: TopUpFormState,
   formData: FormData,
-): Promise<ResellerFormState> {
+): Promise<TopUpFormState> {
   const deps = await adminResellerDeps();
 
-  const result = await topUpBalance(
+  const result = await requestTopUp(
     {
-      wallet: deps.wallet,
+      paymentRequests: deps.paymentRequests,
+      settings: deps.topUpSettings,
       // The cross-module check the use case cannot import for itself: a
       // reseller is identity's fact. It matters more than most, because
-      // `wallet_entry` has no foreign key to catch a mistyped id.
+      // `payment_request` has no foreign key to catch a mistyped id.
       resellerExists: async (resellerId) =>
         (await deps.users.listUsers()).some(
           (user) => user.role === "RESELLER" && user.resellerId === resellerId,
@@ -45,16 +68,31 @@ export async function topUpResellerAction(
     {
       resellerId: String(formData.get("resellerId") ?? ""),
       amountMinor: String(formData.get("amountMinor") ?? ""),
-      memo: String(formData.get("memo") ?? ""),
+      method: String(formData.get("method") ?? ""),
+      reference: String(formData.get("reference") ?? ""),
+      proofUrl: String(formData.get("proofUrl") ?? ""),
     },
   );
 
   if (!result.ok) {
-    return { error: TOPUP_ERRORS[result.reason] };
+    if (result.reason === "below-minimum" || result.reason === "above-maximum") {
+      const bound = formatMoney(money(result.limitMinor, WALLET_CURRENCY), "es-CO");
+      return {
+        ok: false,
+        error:
+          result.reason === "below-minimum"
+            ? `El monto mínimo por recarga es ${bound}.`
+            : `El monto máximo por recarga es ${bound}.`,
+      };
+    }
+    return { ok: false, error: TOPUP_ERRORS[result.reason] };
   }
 
   refresh();
-  return undefined;
+  return {
+    ok: true,
+    message: `Solicitud enviada a validación. El saldo NO se acreditó todavía.`,
+  };
 }
 
 export async function createResellerAction(

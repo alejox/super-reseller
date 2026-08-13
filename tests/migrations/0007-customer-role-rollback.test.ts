@@ -23,6 +23,37 @@ const DRIZZLE_DIR = path.join(
 
 const TIER_ID = "99999999-9999-4999-8999-999999999999";
 
+/**
+ * Everything stacked on top of 0007, newest first.
+ *
+ * This test is about 0007's down file, but rollback is strictly ordered, so
+ * every migration above it has to come off before it is even reachable. The
+ * tags are asserted one by one rather than looped blindly: when somebody adds
+ * a migration without its hand-authored down file, the failure names THAT tag
+ * here instead of surfacing as an unrelated mystery three assertions later.
+ */
+const ABOVE_0007 = [
+  "0016_payment_requests",
+  "0015_rls_lockdown_withdrawals",
+  "0014_groovy_supernaut",
+  "0013_new_lila_cheney",
+  "0012_condemned_gorgon",
+  "0011_happy_red_skull",
+  "0010_majestic_starhawk",
+  "0009_customer_orders",
+  "0008_provider_account",
+] as const;
+
+/**
+ * None of these reference a CUSTOMER row on the users table, so all of them
+ * roll back unconditionally whether or not one exists.
+ */
+async function rollBackEverythingAbove0007(testDb: TestDb): Promise<void> {
+  for (const tag of ABOVE_0007) {
+    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toBe(tag);
+  }
+}
+
 async function insertUser(
   testDb: TestDb,
   id: string,
@@ -52,11 +83,7 @@ describe("0007_customer_role down migration", () => {
   it("raises and leaves the schema untouched when a CUSTOMER row exists", async () => {
     await insertUser(testDb, "11111111-1111-4111-8111-111111111111", "cust@example.com", "CUSTOMER");
 
-    // 0009_customer_orders and 0008_provider_account sit on top and must
-    // come off first before 0007 is even reachable. Neither references a
-    // CUSTOMER row on the users table, so both roll back unconditionally.
-    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toBe("0009_customer_orders");
-    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toBe("0008_provider_account");
+    await rollBackEverythingAbove0007(testDb);
 
     await expect(rollbackLast(testDb.db, DRIZZLE_DIR)).rejects.toMatchObject({
       cause: expect.objectContaining({
@@ -74,11 +101,7 @@ describe("0007_customer_role down migration", () => {
   it("restores the enum and both original CHECKs when the table has no CUSTOMER row", async () => {
     await insertUser(testDb, "22222222-2222-4222-8222-222222222222", "reseller@example.com", "RESELLER");
 
-    // 0009_customer_orders and 0008_provider_account sit on top of 0007 and
-    // must come off first — neither references a CUSTOMER row on the users
-    // table, so both roll back unconditionally.
-    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toBe("0009_customer_orders");
-    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toBe("0008_provider_account");
+    await rollBackEverythingAbove0007(testDb);
 
     const tag = await rollbackLast(testDb.db, DRIZZLE_DIR);
     expect(tag).toBe("0007_customer_role");

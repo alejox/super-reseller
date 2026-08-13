@@ -18,6 +18,18 @@ vi.mock("@/modules/identity/application/dal", () => ({
 }));
 vi.mock("@/modules/identity/application/actions", () => ({ logout: vi.fn() }));
 
+/**
+ * The route the nav thinks it is on. `null` is the real default — that is
+ * what `usePathname()` returns with no router mounted, and `AdminNavigation`
+ * has to survive it.
+ */
+let currentPathname: string | null = null;
+
+vi.mock("next/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("next/navigation")>()),
+  usePathname: () => currentPathname,
+}));
+
 // Only the process boundaries are mocked — the database handle and the
 // repository gate. Everything between them (the read model, the ordering, the
 // tables, the empty states) is the real code under test.
@@ -97,6 +109,7 @@ function section(name: "Niveles de precio" | "Servicios" | "Planes") {
 
 beforeEach(() => {
   emptyCatalog();
+  currentPathname = null;
 });
 
 afterEach(() => {
@@ -105,23 +118,98 @@ afterEach(() => {
 });
 
 describe("admin route wiring", () => {
-  it("gives an ADMIN the responsive shell, dashboard, and catalog route link", async () => {
-    const { container } = render(
+  /**
+   * Rewritten against the shell that actually exists.
+   *
+   * The previous version asserted a heading ("Panel de administración"), a
+   * link ("Catálogo" -> /admin/catalog) and two Tailwind classes
+   * (`lg:flex-col`, `lg:grid-cols-[15rem_1fr]`) from the layout that the
+   * 2026-08 redesign replaced. The class assertions are NOT reinstated in a
+   * new spelling: pinning a test to utility classes is what made this rot
+   * silently instead of failing on the change that caused it. What it checks
+   * now is what the shell is FOR — the role gate, the dashboard, and nav
+   * links that go where they say.
+   *
+   */
+  it("gives an ADMIN the shell, the dashboard, and nav links that resolve", async () => {
+    render(
       <AdminLayout>
         <AdminPage />
       </AdminLayout>,
     );
 
-    expect(screen.getByRole("heading", { name: "Panel de administración" })).toBeVisible();
-    expect(screen.getAllByRole("link", { name: "Catálogo" })[0]).toHaveAttribute(
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeVisible();
+
+    const nav = within(screen.getByRole("navigation"));
+    expect(nav.getByRole("link", { name: "Dashboard" })).toHaveAttribute("href", "/admin");
+    // Restored after the redesign left `/admin/catalog` reachable only by
+    // typing the URL. This is the assertion that keeps it reachable.
+    expect(nav.getByRole("link", { name: "Catálogo" })).toHaveAttribute("href", "/admin/catalog");
+    expect(nav.getByRole("link", { name: "Account Inventory" })).toHaveAttribute(
       "href",
-      "/admin/catalog",
+      "/admin/inventory",
     );
-    expect(screen.getByRole("navigation", { name: "Navegación de administración" })).toHaveClass(
-      "lg:flex-col",
+    expect(nav.getByRole("link", { name: "Pagos por validar" })).toHaveAttribute(
+      "href",
+      "/admin/payments",
     );
-    expect(container.firstElementChild).toHaveClass("lg:grid-cols-[15rem_1fr]");
+    expect(nav.getByRole("link", { name: "Financials" })).toHaveAttribute("href", "/admin/orders");
+
     await waitFor(() => expect(requireRole).toHaveBeenCalledWith("ADMIN"));
+  });
+
+  /**
+   * `aria-current`, not a Tailwind class. The active item used to be marked
+   * by colour alone — invisible to a screen reader, and untestable except by
+   * pinning the test to utility classes, which is exactly how the previous
+   * version of this suite rotted through a redesign without failing.
+   */
+  it.each([
+    ["/admin/orders/8f2c-order-id", "Financials"],
+    ["/admin/inventory/upload", "Account Inventory"],
+    ["/admin/settings/topups", "Settings"],
+    ["/admin/catalog", "Catálogo"],
+  ])("marks the section owning %s as the current page", (pathname, expectedItem) => {
+    currentPathname = pathname;
+
+    render(
+      <AdminLayout>
+        <AdminPage />
+      </AdminLayout>,
+    );
+
+    const current = within(screen.getByRole("navigation")).getByRole("link", { current: "page" });
+    expect(current).toHaveAccessibleName(expectedItem);
+  });
+
+  it("does not leave Dashboard permanently current just because every route starts with /admin", () => {
+    currentPathname = "/admin/resellers";
+
+    render(
+      <AdminLayout>
+        <AdminPage />
+      </AdminLayout>,
+    );
+
+    const nav = within(screen.getByRole("navigation"));
+    expect(nav.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+    expect(nav.getByRole("link", { name: "Reseller Network" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  it("renders the nav when there is no router context to read a pathname from", () => {
+    // `usePathname()` returns null here, exactly as it does before the client
+    // router mounts. `AdminNavigation` used to call `.startsWith` on it and
+    // take the entire admin shell down with a TypeError.
+    expect(() =>
+      render(
+        <AdminLayout>
+          <AdminPage />
+        </AdminLayout>,
+      ),
+    ).not.toThrow();
   });
 
   it("mounts the catalog page behind authorization and reads the real catalog", async () => {

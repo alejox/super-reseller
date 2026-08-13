@@ -86,6 +86,8 @@ describe("identity migration round trip (apply all, roll the identity stack back
     // with its role column wired to the user_role enum, plus the slice-5a
     // auth pair (0002 users.password_hash, 0003 sessions).
     expect(await publicTableNames(testDb)).toEqual([
+      "inventory_accounts",
+      "payment_request",
       "plan",
       "plan_price",
       "price_tier",
@@ -93,8 +95,14 @@ describe("identity migration round trip (apply all, roll the identity stack back
       "sales_order",
       "service",
       "sessions",
+      "ticket_messages",
+      "tickets",
+      "topup_settings",
       "users",
       "wallet_entry",
+      "withdrawal_methods",
+      "withdrawal_request",
+      "withdrawal_settings",
     ]);
     // 0007 widens role to CUSTOMER and drops the enum (design.md "Decision:
     // role becomes text + CHECK; the user_role enum is dropped") — the enum
@@ -104,11 +112,23 @@ describe("identity migration round trip (apply all, roll the identity stack back
     expect(await usersHasPasswordHash(testDb)).toBe(true);
 
     // Single-step rollbacks — the exact path `npm run db:rollback` uses.
-    // 0009_customer_orders and 0008_provider_account sit on top of
-    // everything else and must come off first; neither references a
-    // CUSTOMER row on the users table, so both roll back unconditionally.
-    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0009_customer_orders");
-    expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0008_provider_account");
+    // Everything stacked above the identity layer comes off first, newest
+    // first, each one asserted by tag: a migration that shipped without its
+    // hand-authored down file fails HERE, named, instead of surfacing as a
+    // mystery further down.
+    for (const tag of [
+      "0016_payment_requests",
+      "0015_rls_lockdown_withdrawals",
+      "0014_groovy_supernaut",
+      "0013_new_lila_cheney",
+      "0012_condemned_gorgon",
+      "0011_happy_red_skull",
+      "0010_majestic_starhawk",
+      "0009_customer_orders",
+      "0008_provider_account",
+    ]) {
+      expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual(tag);
+    }
     expect(await rollbackLast(testDb.db, DRIZZLE_DIR)).toEqual("0007_customer_role");
     expect(await userRoleTypeExists(testDb)).toBe(true);
     expect(await roleColumnUsesEnum(testDb)).toBe(true);

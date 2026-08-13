@@ -1,0 +1,12 @@
+-- Hand-authored down migration for 0012_condemned_gorgon.sql (design.md:
+-- "Decision: hand-authored down migrations").
+--
+-- One statement, as the migrator requires (src/shared/db/migrator.ts runs this
+-- file as a single prepared statement). No DO block is needed: the forward
+-- migration's second statement adds a foreign key ON the column this drops,
+-- and a dropped column takes its constraints with it.
+--
+-- This severs the link between an inventory account and the provider account
+-- it was sourced from. The rows on both sides survive; only the knowledge of
+-- which came from which is lost.
+ALTER TABLE "inventory_accounts" DROP COLUMN IF EXISTS "provider_account_id";

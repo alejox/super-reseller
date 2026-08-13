@@ -1,6 +1,5 @@
 import { getScope } from "@/modules/identity/application/dal";
-import { WALLET_CURRENCY } from "@/modules/wallet/application/admin/top-up-balance";
-import { walletBalance } from "@/modules/wallet/domain/wallet-entry";
+import { WALLET_CURRENCY, walletBalance } from "@/modules/wallet/domain/wallet-entry";
 import { DrizzleWalletRepository } from "@/modules/wallet/infrastructure/drizzle-wallet-repository";
 import { formatMoney } from "@/shared/money/money";
 import { getDb } from "@/shared/db/client";

@@ -22,6 +22,16 @@ import type { ResellerId, UserId, WalletEntryId } from "./ids";
  */
 
 /**
+ * The only currency this product mints (design.md).
+ *
+ * Lives in the domain rather than in a use case: it used to be exported from
+ * `application/admin/top-up-balance.ts`, so six screens imported a use case
+ * they never called just to learn what currency the ledger holds — and the
+ * constant died with that file when payment validation replaced it.
+ */
+export const WALLET_CURRENCY = "COP";
+
+/**
  * Why a movement happened. `TOPUP` is money the operator received,
  * `ADJUSTMENT` a manual correction, `ORDER_DEBIT` a purchase.
  *

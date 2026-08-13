@@ -1,40 +1,70 @@
 "use client";
 
 import Link from "next/link";
-import { Card } from "@/app/_components/ui/card";
 
-import { 
-  LayoutDashboard, 
-  Users, 
-  MonitorPlay, 
-  Wallet, 
-  Headset, 
-  Settings 
+import {
+  LayoutDashboard,
+  Users,
+  MonitorPlay,
+  Wallet,
+  Headset,
+  Settings,
+  ShieldCheck,
+  Tags
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 
+const NAV_ITEMS = [
+  { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { name: "Reseller Network", href: "/admin/resellers", icon: Users },
+  { name: "Pagos por validar", href: "/admin/payments", icon: ShieldCheck },
+  // Restored: `/admin/catalog` spent the redesign as a live route with no way
+  // to reach it. It sits above Account Inventory because it is what inventory
+  // is stocked AGAINST — services, plans and prices are defined here first.
+  { name: "Catálogo", href: "/admin/catalog", icon: Tags },
+  { name: "Account Inventory", href: "/admin/inventory", icon: MonitorPlay },
+  { name: "Financials", href: "/admin/orders", icon: Wallet },
+  { name: "Support", href: "/admin/support", icon: Headset },
+  { name: "Settings", href: "/admin/settings", icon: Settings },
+] as const;
+
+/**
+ * Whether `href` is the section the current path belongs to.
+ *
+ * A prefix match, so a sub-route highlights its own section: `/admin/orders/
+ * <id>` lights up Financials, `/admin/inventory/upload` lights up Account
+ * Inventory, `/admin/settings/topups` lights up Settings. All three were dark
+ * before, because the old check was an exact `===` — the nav simply stopped
+ * highlighting anything the moment you clicked into a detail page.
+ *
+ * `/admin` is the one exception and has to be: as a prefix it matches every
+ * route in the panel, so Dashboard would be permanently active.
+ */
+function isSectionActive(pathname: string, href: string): boolean {
+  if (href === "/admin") return pathname === "/admin";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AdminNavigation() {
-  const pathname = usePathname();
-  
-  const navItems = [
-    { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { name: "Reseller Network", href: "/admin/resellers", icon: Users },
-    { name: "Account Inventory", href: "/admin/inventory", icon: MonitorPlay },
-    { name: "Financials", href: "/admin/orders", icon: Wallet },
-    { name: "Support", href: "/admin/support", icon: Headset },
-    { name: "Settings", href: "/admin/settings", icon: Settings },
-  ];
+  // `?? ""` because `usePathname()` is typed `string` but really can return
+  // null — outside a router context, and during the brief window before the
+  // client router mounts. The `startsWith` above would throw on it, taking
+  // the whole admin shell down with it rather than just losing a highlight.
+  const pathname = usePathname() ?? "";
 
   return (
     <ul className="flex flex-col gap-2">
-      {navItems.map((item) => {
-        // We consider /admin/catalog and /admin/inventory both as "Account Inventory"
-        const isActive = pathname === item.href || (item.name === "Account Inventory" && pathname.startsWith("/admin/catalog"));
+      {NAV_ITEMS.map((item) => {
+        const isActive = isSectionActive(pathname, item.href);
         const Icon = item.icon;
-        
+
         return (
           <li key={item.name}>
             <Link
+              // The active item was marked by colour alone, which says nothing
+              // to a screen reader — and nothing to a test either, unless it
+              // asserts Tailwind classes, which is how the last one rotted.
+              aria-current={isActive ? "page" : undefined}
               href={item.href}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base transition-colors active:scale-95 duration-150 ${
                 isActive 
@@ -52,7 +82,7 @@ export function AdminNavigation() {
   );
 }
 
-import { Plus, ShieldCheck, Banknote, Store, Users as UsersIcon, Ticket, MoreVertical, CheckCircle2 } from "lucide-react";
+import { Plus, Banknote, Store, Users as UsersIcon, Ticket, MoreVertical, CheckCircle2 } from "lucide-react";
 
 export function AdminDashboardView() {
   return (

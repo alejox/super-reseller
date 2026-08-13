@@ -2,7 +2,7 @@ import type { ResellerId, UserId } from "../../domain/ids";
 import { DEFAULT_WITHDRAWAL_SETTINGS, type WithdrawalRepository } from "../../domain/withdrawal";
 import type { WithdrawalRequest } from "../../domain/withdrawal-request";
 import type { WithdrawalRequestRepository } from "../../domain/withdrawal-request-repository";
-import { WALLET_CURRENCY } from "../admin/top-up-balance";
+import { WALLET_CURRENCY } from "../../domain/wallet-entry";
 
 /**
  * RESELLER use case: take money out.

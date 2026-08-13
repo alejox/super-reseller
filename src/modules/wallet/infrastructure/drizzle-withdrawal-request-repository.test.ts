@@ -159,6 +159,44 @@ describe("DrizzleWithdrawalRequestRepository.openRequest", () => {
     });
   });
 
+  /**
+   * The cap window must be a UTC day no matter what timezone the session
+   * happens to be in.
+   *
+   * `date_trunc('day', now() AT TIME ZONE 'UTC')` returns a timestamp WITHOUT
+   * a zone. Compared against `requested_at`, which is `timestamptz`, Postgres
+   * casts it using the SESSION timezone — so in Bogotá (UTC-5), between 19:00
+   * and midnight local the UTC date has already rolled over, the boundary
+   * lands FIVE HOURS IN THE FUTURE, and no row from today counts. The cap
+   * silently resets and a reseller withdraws twice the daily maximum.
+   *
+   * Both zones are exercised because the bug only shows where the local date
+   * and the UTC date disagree: at any UTC instant, UTC-12 straddles the
+   * boundary for half the day and UTC+14 for the other half, so running both
+   * catches it whatever time the suite happens to run at. That is the whole
+   * point — this failure used to depend on the clock, and a test that only
+   * fails after 19:00 is a test nobody believes.
+   */
+  it.each(["Etc/GMT+12", "Etc/GMT-14"])(
+    "keeps the daily cap on a UTC day with the session in %s",
+    async (timeZone) => {
+      await testDb.db.execute(sql.raw(`SET TIME ZONE '${timeZone}'`));
+      await fund(1_000_000);
+
+      const first = await open(200_000, 300_000);
+      expect(first.ok).toBe(true);
+
+      const second = await open(200_000, 300_000);
+
+      expect(second).toMatchObject({
+        ok: false,
+        reason: "daily-limit-exceeded",
+        withdrawnTodayMinor: 200_000,
+        limitMinor: 300_000,
+      });
+    },
+  );
+
   it("opens a large request under review and a small one approved", async () => {
     await fund(MANUAL_REVIEW_THRESHOLD_MINOR * 4);
 

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Download, UserPlus, Star, Network, MonitorSmartphone } from "lucide-react";
+import { Download, UserPlus } from "lucide-react";
 
+import { ResellersStats, ResellersStatsFallback } from "./resellers-stats";
 import { ResellersWorkspace, ResellersWorkspaceFallback } from "./resellers-workspace";
 
 export const metadata: Metadata = { title: "Reseller Network" };
@@ -31,47 +32,11 @@ export default function AdminResellersPage() {
         </div>
       </header>
 
-      {/* Stats Row (Bento Grid) */}
-      <section className="grid gap-6 sm:grid-cols-3">
-        {/* Available Credits */}
-        <div className="rounded-xl border-t border-[#4cd7f6]/30 bg-[#444173]/20 p-6 flex flex-col gap-4">
-          <div className="flex justify-between items-center text-[#cbc3d7]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Créditos Disponibles</span>
-            <Star className="w-5 h-5 text-[#d0bcff]" />
-          </div>
-          <p className="text-4xl font-bold text-[#dae2fd]">14,250</p>
-          <div className="text-sm text-[#4cd7f6] flex items-center gap-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-            +1,250 este mes
-          </div>
-        </div>
-
-        {/* Active Sub-Resellers */}
-        <div className="rounded-xl border-t border-[#494454]/30 bg-[#171f33] p-6 flex flex-col gap-4">
-          <div className="flex justify-between items-center text-[#cbc3d7]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Sub-Revendedores</span>
-            <Network className="w-5 h-5" />
-          </div>
-          <p className="text-4xl font-bold text-[#dae2fd]">48</p>
-          <div className="text-sm text-[#cbc3d7] flex items-center gap-2">
-            Activos
-          </div>
-        </div>
-
-        {/* Total Active Accounts */}
-        <div className="rounded-xl border-t border-[#494454]/30 bg-[#171f33] p-6 flex flex-col gap-4">
-          <div className="flex justify-between items-center text-[#cbc3d7]">
-            <span className="text-xs font-semibold uppercase tracking-wider">Cuentas Activas</span>
-            <MonitorSmartphone className="w-5 h-5" />
-          </div>
-          <p className="text-4xl font-bold text-[#dae2fd]">3,492</p>
-          <div className="text-sm text-[#cbc3d7] flex items-center gap-2">
-            Total en la red
-          </div>
-        </div>
-      </section>
+      {/* Stats Row — real figures, read from the ledger. See the comment in
+          `resellers-stats.tsx` for the A7 decision these replace. */}
+      <Suspense fallback={<ResellersStatsFallback />}>
+        <ResellersStats />
+      </Suspense>
 
       {/* Workspace */}
       <Suspense fallback={<ResellersWorkspaceFallback />}>

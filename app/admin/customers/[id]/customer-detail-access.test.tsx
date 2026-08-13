@@ -76,7 +76,11 @@ describe("AdminCustomerDetailPage (PA: Provider Account Isolation)", () => {
   it("shows the target customer's provider_account rows read-only", async () => {
     listForTenant.mockResolvedValue([account("pa-1", "tenant-1", "stella_juan_2024")]);
 
-    render(await CustomerDetailWorkspace({ targetUserId: "customer-1" }));
+    // `params`, not `targetUserId`: the workspace takes the route params
+    // promise and awaits the id out of it, the same shape `page.tsx` passes.
+    // The old call site type-checked as `any` through the async component and
+    // only failed at runtime, which is why `tsc` flagged this file too.
+    render(await CustomerDetailWorkspace({ params: Promise.resolve({ id: "customer-1" }) }));
 
     expect(screen.getByText("stella_juan_2024")).toBeVisible();
     expect(listForTenant).toHaveBeenCalledWith("tenant-1");
@@ -85,7 +89,11 @@ describe("AdminCustomerDetailPage (PA: Provider Account Isolation)", () => {
   it("offers an on-behalf create form naming the target customer", async () => {
     listServices.mockResolvedValue([{ id: "service-1", slug: "stella-tv", name: "Stella TV", description: null, createdAt: new Date(), updatedAt: new Date(), retiredAt: null }]);
 
-    render(await CustomerDetailWorkspace({ targetUserId: "customer-1" }));
+    // `params`, not `targetUserId`: the workspace takes the route params
+    // promise and awaits the id out of it, the same shape `page.tsx` passes.
+    // The old call site type-checked as `any` through the async component and
+    // only failed at runtime, which is why `tsc` flagged this file too.
+    render(await CustomerDetailWorkspace({ params: Promise.resolve({ id: "customer-1" }) }));
 
     const hidden = screen.getByDisplayValue("customer-1") as HTMLInputElement;
     expect(hidden).toHaveAttribute("name", "targetUserId");

@@ -51,6 +51,10 @@ describe("PanelPage (RESELLER-only defense in depth)", () => {
     const { default: PanelPage } = await import("./page");
     render(<PanelPage />);
 
-    expect(screen.getByRole("heading", { name: "Panel" })).toBeVisible();
+    // "Service Marketplace" since the 2026-08 redesign; this assertion still
+    // said "Panel". The point of the test is unchanged — the gate must not
+    // blank the page for a legitimate RESELLER — so it now looks for the
+    // heading the page actually renders.
+    expect(screen.getByRole("heading", { name: "Service Marketplace" })).toBeVisible();
   });
 });
